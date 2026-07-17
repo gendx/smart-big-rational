@@ -1,0 +1,24 @@
+[package]
+name = "smart-big-rational"
+description = "Efficient rational numbers for additions, subtractions and multiplications"
+version = "0.1.0"
+authors = ["Guillaume Endignoux <guillaumee@google.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/gendx/smart-big-rational"
+categories = ["algorithms", "data-structures", "mathematics", "science"]
+keywords = ["arithmetic", "exact", "fractions", "numerics", "rational"]
+exclude = [".github/*"]
+edition = "2024"
+rust-version = "1.87.0"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]
+
+[dependencies]
+num-bigint = "0.4"
+num-integer = "0.1"
+num-rational = "0.4"
+num-traits = "0.2"
+
+[dev-dependencies]
+rand = "0.10"
