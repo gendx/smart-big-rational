@@ -1,5 +1,13 @@
 # SmartBigRational: a big rational type optimized for addition, subtraction and multiplication
 
+[![Minimum Rust 1.87.0](https://img.shields.io/badge/rust-1.87.0%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.87.0/)
+[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/smart-big-rational?category=code&branch=main)](https://github.com/gendx/smart-big-rational)
+[![Dependencies](https://deps.rs/repo/github/gendx/smart-big-rational/status.svg)](https://deps.rs/repo/github/gendx/smart-big-rational)
+[![License](https://img.shields.io/crates/l/smart-big-rational.svg)](https://github.com/gendx/smart-big-rational/blob/main/LICENSE)
+[![Codecov](https://codecov.io/gh/gendx/smart-big-rational/branch/main/graph/badge.svg)](https://codecov.io/gh/gendx/smart-big-rational/tree/main)
+[![Build Status](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml)
+[![Test Status](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml)
+
 This Rust library provides the `SmartBigRational` type, similar to the `num`
 crate's
 [`BigRational`](https://docs.rs/num-rational/latest/num_rational/type.BigRational.html)
