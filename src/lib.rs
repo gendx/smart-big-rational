@@ -76,6 +76,21 @@ impl SmartBigRational {
         }
     }
 
+    /// Returns the current numerator and denominator as is, without reduction.
+    pub fn into_raw(self) -> (BigInt, Denom) {
+        (self.num, self.denom)
+    }
+
+    /// Returns the current numerator as is, without reduction.
+    pub fn numer(&self) -> &BigInt {
+        &self.num
+    }
+
+    /// Returns the current denominator as is, without reduction.
+    pub fn denom(&self) -> &Denom {
+        &self.denom
+    }
+
     /// Converts this value to a [`BigRational`].
     pub fn into_big_rational(self) -> BigRational {
         self.into()
