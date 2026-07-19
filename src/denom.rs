@@ -225,7 +225,14 @@ impl Denom {
         }
     }
 
-    const fn decompose_small(mut x: usize) -> Self {
+    /// Decomposes the given value into a denominator consisting of small prime
+    /// factors.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the input isn't a product of small prime
+    /// factors, up to the 24th prime number i.e. 89.
+    pub const fn decompose_small(mut x: usize) -> Self {
         let mut primes = [0u8; Self::NUM_PRIMES];
         // TODO: use a for loop once supported in `const fn` context.
         let mut i = 0;
