@@ -9,7 +9,7 @@ categories = ["algorithms", "data-structures", "mathematics", "science"]
 keywords = ["arithmetic", "exact", "fractions", "numerics", "rational"]
 exclude = [".github/*"]
 edition = "2024"
-rust-version = "1.87.0"
+rust-version = "1.91.0"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs", "--generate-link-to-definition"]

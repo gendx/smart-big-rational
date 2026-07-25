@@ -2,7 +2,7 @@
 
 [![Crate](https://img.shields.io/crates/v/smart-big-rational.svg?logo=rust)](https://crates.io/crates/smart-big-rational)
 [![Documentation](https://img.shields.io/docsrs/smart-big-rational?logo=rust)](https://docs.rs/smart-big-rational/)
-[![Minimum Rust 1.87.0](https://img.shields.io/badge/rust-1.87.0%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.87.0/)
+[![Minimum Rust 1.91.0](https://img.shields.io/badge/rust-1.91.0%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.91.0/)
 [![Lines of Code](https://www.aschey.tech/tokei/github/gendx/smart-big-rational?category=code&branch=main)](https://github.com/gendx/smart-big-rational)
 [![Dependencies](https://deps.rs/repo/github/gendx/smart-big-rational/status.svg)](https://deps.rs/repo/github/gendx/smart-big-rational)
 [![License](https://img.shields.io/crates/l/smart-big-rational.svg)](https://github.com/gendx/smart-big-rational/blob/main/LICENSE)
