@@ -1,7 +1,7 @@
 [package]
 name = "smart-big-rational"
 description = "Efficient rational numbers for additions, subtractions and multiplications"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Guillaume Endignoux <guillaumee@google.com>"]
 license = "Apache-2.0"
 repository = "https://github.com/gendx/smart-big-rational"
