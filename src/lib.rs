@@ -22,8 +22,10 @@
 #![forbid(missing_docs, unsafe_code)]
 
 mod denom;
+mod denom24;
 
-pub use denom::Denom;
+pub use denom::{Denom, DenomRef};
+pub use denom24::Denom24;
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 use num_traits::{One, Pow, Zero};
@@ -34,25 +36,25 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 /// A big rational type optimized for addition, subtraction and multiplication.
 ///
-/// This is achieved by representing the denominator with the [`Denom`] type,
-/// and performing only partial GCD reductions during arithmetic operations.
+/// This is achieved by representing the denominator with a [`Denom`] type, and
+/// performing only partial GCD reductions during arithmetic operations.
 #[derive(Clone, Debug)]
-pub struct SmartBigRational {
+pub struct SmartBigRational<D> {
     num: BigInt,
-    denom: Denom,
+    denom: D,
 }
 
-impl SmartBigRational {
+impl<D: Denom> SmartBigRational<D> {
     /// Constant value of 0.
     pub const ZERO: Self = Self {
         num: BigInt::ZERO,
-        denom: Denom::ONE,
+        denom: D::ONE,
     };
 
     /// Constant value of 1.
     pub const ONE: Self = Self {
         num: BigInt::ONE,
-        denom: Denom::ONE,
+        denom: D::ONE,
     };
 
     /// Creates a new rational number by dividing the given numerator by the
@@ -61,15 +63,15 @@ impl SmartBigRational {
     /// ```
     /// # use num_bigint::BigInt;
     /// # use num_rational::BigRational;
-    /// # use smart_big_rational::SmartBigRational;
-    /// let x = SmartBigRational::ratio(2, 3u32);
+    /// # use smart_big_rational::{Denom24, SmartBigRational};
+    /// let x = SmartBigRational::<Denom24>::ratio(2, 3u32);
     ///
     /// assert_eq!(
     ///     BigRational::from(x),
     ///     BigRational::new(BigInt::from(2), BigInt::from(3))
     /// );
     /// ```
-    pub fn ratio(num: impl Into<BigInt>, denom: impl Into<Denom>) -> Self {
+    pub fn ratio(num: impl Into<BigInt>, denom: impl Into<D>) -> Self {
         Self {
             num: num.into(),
             denom: denom.into(),
@@ -77,7 +79,7 @@ impl SmartBigRational {
     }
 
     /// Returns the current numerator and denominator as is, without reduction.
-    pub fn into_raw(self) -> (BigInt, Denom) {
+    pub fn into_raw(self) -> (BigInt, D) {
         (self.num, self.denom)
     }
 
@@ -87,7 +89,7 @@ impl SmartBigRational {
     }
 
     /// Returns the current denominator as is, without reduction.
-    pub fn denom(&self) -> &Denom {
+    pub fn denom(&self) -> &D {
         &self.denom
     }
 
@@ -117,51 +119,51 @@ impl SmartBigRational {
     }
 }
 
-impl From<BigRational> for SmartBigRational {
-    fn from(value: BigRational) -> SmartBigRational {
+impl<D: Denom> From<BigRational> for SmartBigRational<D> {
+    fn from(value: BigRational) -> Self {
         let (num, denom) = value.into_raw();
         let (sign, denom) = denom.into_parts();
         assert_eq!(sign, Sign::Plus);
-        SmartBigRational {
+        Self {
             num,
             denom: denom.into(),
         }
     }
 }
 
-impl From<&BigRational> for SmartBigRational {
-    fn from(value: &BigRational) -> SmartBigRational {
+impl<D: Denom> From<&BigRational> for SmartBigRational<D> {
+    fn from(value: &BigRational) -> Self {
         let denom = value.denom();
         assert_eq!(denom.sign(), Sign::Plus);
-        SmartBigRational {
+        Self {
             num: value.numer().clone(),
             denom: denom.magnitude().into(),
         }
     }
 }
 
-impl From<BigInt> for SmartBigRational {
-    fn from(value: BigInt) -> SmartBigRational {
-        SmartBigRational {
+impl<D: Denom> From<BigInt> for SmartBigRational<D> {
+    fn from(value: BigInt) -> Self {
+        Self {
             num: value,
-            denom: Denom::ONE,
+            denom: D::ONE,
         }
     }
 }
 
-impl From<SmartBigRational> for BigRational {
-    fn from(value: SmartBigRational) -> BigRational {
+impl<D: Denom> From<SmartBigRational<D>> for BigRational {
+    fn from(value: SmartBigRational<D>) -> BigRational {
         BigRational::new(value.num, value.denom.to_biguint().into())
     }
 }
 
-impl From<&SmartBigRational> for BigRational {
-    fn from(value: &SmartBigRational) -> BigRational {
+impl<D: Denom> From<&SmartBigRational<D>> for BigRational {
+    fn from(value: &SmartBigRational<D>) -> BigRational {
         BigRational::new(value.num.clone(), value.denom.to_biguint().into())
     }
 }
 
-impl PartialEq for SmartBigRational {
+impl<D: Denom> PartialEq for SmartBigRational<D> {
     fn eq(&self, rhs: &Self) -> bool {
         self.num.sign() == rhs.num.sign()
             && self.num.magnitude() * rhs.denom.to_biguint()
@@ -169,15 +171,15 @@ impl PartialEq for SmartBigRational {
     }
 }
 
-impl Eq for SmartBigRational {}
+impl<D: Denom> Eq for SmartBigRational<D> {}
 
-impl PartialOrd for SmartBigRational {
+impl<D: Denom> PartialOrd for SmartBigRational<D> {
     fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
         Some(self.cmp(rhs))
     }
 }
 
-impl Ord for SmartBigRational {
+impl<D: Denom> Ord for SmartBigRational<D> {
     fn cmp(&self, rhs: &Self) -> Ordering {
         match (self.num.sign(), rhs.num.sign()) {
             (Sign::Plus, Sign::Plus) => (self.num.magnitude() * rhs.denom.to_biguint())
@@ -195,13 +197,13 @@ impl Ord for SmartBigRational {
     }
 }
 
-impl Display for SmartBigRational {
+impl<D: Denom> Display for SmartBigRational<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         Display::fmt(&self.to_big_rational(), f)
     }
 }
 
-impl Zero for SmartBigRational {
+impl<D: Denom> Zero for SmartBigRational<D> {
     fn zero() -> Self {
         Self::ZERO
     }
@@ -211,27 +213,27 @@ impl Zero for SmartBigRational {
     }
 }
 
-impl One for SmartBigRational {
+impl<D: Denom> One for SmartBigRational<D> {
     fn one() -> Self {
         Self::ONE
     }
 }
 
-impl Neg for SmartBigRational {
+impl<D: Denom> Neg for SmartBigRational<D> {
     type Output = Self;
 
     fn neg(self) -> Self {
-        SmartBigRational {
+        Self {
             num: -self.num,
             denom: self.denom,
         }
     }
 }
 
-impl Neg for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Neg for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn neg(self) -> SmartBigRational {
+    fn neg(self) -> SmartBigRational<D> {
         SmartBigRational {
             num: -&self.num,
             denom: self.denom.clone(),
@@ -239,21 +241,24 @@ impl Neg for &SmartBigRational {
     }
 }
 
-impl Pow<u32> for SmartBigRational {
+impl<D: Denom> Pow<u32> for SmartBigRational<D> {
     type Output = Self;
 
     fn pow(self, rhs: u32) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num.pow(rhs),
             denom: self.denom.pow(rhs),
         }
     }
 }
 
-impl Pow<u32> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Pow<u32> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn pow(self, rhs: u32) -> SmartBigRational {
+    fn pow(self, rhs: u32) -> SmartBigRational<D> {
         SmartBigRational {
             num: Pow::pow(&self.num, rhs),
             denom: Pow::pow(&self.denom, rhs),
@@ -261,38 +266,38 @@ impl Pow<u32> for &SmartBigRational {
     }
 }
 
-impl Add for SmartBigRational {
+impl<D: Denom> Add for SmartBigRational<D> {
     type Output = Self;
 
     fn add(mut self, mut rhs: Self) -> Self {
-        let denom = Denom::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
-        SmartBigRational {
+        let denom = D::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
+        Self {
             num: self.num + rhs.num,
             denom,
         }
     }
 }
 
-impl Add<&SmartBigRational> for SmartBigRational {
+impl<D: Denom> Add<&Self> for SmartBigRational<D> {
     type Output = Self;
 
-    fn add(mut self, rhs: &SmartBigRational) -> SmartBigRational {
+    fn add(mut self, rhs: &Self) -> Self {
         let mut rhs_num = rhs.num.clone();
-        let denom = Denom::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
-        SmartBigRational {
+        let denom = D::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
+        Self {
             num: self.num + rhs_num,
             denom,
         }
     }
 }
 
-impl Add for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Add for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn add(self, rhs: Self) -> SmartBigRational {
+    fn add(self, rhs: Self) -> SmartBigRational<D> {
         let mut num = self.num.clone();
         let mut rhs_num = rhs.num.clone();
-        let denom = Denom::normalize(&mut num, &mut rhs_num, &self.denom, &rhs.denom);
+        let denom = D::normalize(&mut num, &mut rhs_num, &self.denom, &rhs.denom);
         SmartBigRational {
             num: num + rhs_num,
             denom,
@@ -300,12 +305,12 @@ impl Add for &SmartBigRational {
     }
 }
 
-impl Add<SmartBigRational> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Add<SmartBigRational<D>> for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn add(self, mut rhs: SmartBigRational) -> SmartBigRational {
+    fn add(self, mut rhs: SmartBigRational<D>) -> SmartBigRational<D> {
         let mut num = self.num.clone();
-        let denom = Denom::normalize(&mut num, &mut rhs.num, &self.denom, &rhs.denom);
+        let denom = D::normalize(&mut num, &mut rhs.num, &self.denom, &rhs.denom);
         SmartBigRational {
             num: num + rhs.num,
             denom,
@@ -313,48 +318,57 @@ impl Add<SmartBigRational> for &SmartBigRational {
     }
 }
 
-impl AddAssign for SmartBigRational {
+impl<D: Denom> AddAssign for SmartBigRational<D> {
     fn add_assign(&mut self, mut rhs: Self) {
-        self.denom = Denom::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
+        self.denom = D::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
         self.num += rhs.num;
     }
 }
 
-impl AddAssign<&SmartBigRational> for SmartBigRational {
-    fn add_assign(&mut self, rhs: &SmartBigRational) {
+impl<D: Denom> AddAssign<&Self> for SmartBigRational<D> {
+    fn add_assign(&mut self, rhs: &Self) {
         let mut rhs_num = rhs.num.clone();
-        self.denom = Denom::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
+        self.denom = D::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
         self.num += rhs_num;
     }
 }
 
-impl Add<BigInt> for SmartBigRational {
+impl<D: Denom> Add<BigInt> for SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
     type Output = Self;
 
     fn add(self, mut rhs: BigInt) -> Self {
         rhs *= &self.denom;
-        SmartBigRational {
+        Self {
             num: self.num + rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Add<&BigInt> for SmartBigRational {
+impl<D: Denom> Add<&BigInt> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     type Output = Self;
 
     fn add(self, rhs: &BigInt) -> Self {
-        SmartBigRational {
-            num: self.num + rhs * &self.denom,
+        Self {
+            num: self.num + &self.denom * rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Add<BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Add<BigInt> for &SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn add(self, mut rhs: BigInt) -> SmartBigRational {
+    fn add(self, mut rhs: BigInt) -> SmartBigRational<D> {
         rhs *= &self.denom;
         SmartBigRational {
             num: &self.num + rhs,
@@ -363,62 +377,71 @@ impl Add<BigInt> for &SmartBigRational {
     }
 }
 
-impl Add<&BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Add<&BigInt> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn add(self, rhs: &BigInt) -> SmartBigRational {
+    fn add(self, rhs: &BigInt) -> SmartBigRational<D> {
         SmartBigRational {
-            num: &self.num + rhs * &self.denom,
+            num: &self.num + &self.denom * rhs,
             denom: self.denom.clone(),
         }
     }
 }
 
-impl AddAssign<BigInt> for SmartBigRational {
+impl<D: Denom> AddAssign<BigInt> for SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
     fn add_assign(&mut self, mut rhs: BigInt) {
         rhs *= &self.denom;
         self.num += rhs;
     }
 }
 
-impl AddAssign<&BigInt> for SmartBigRational {
+impl<D: Denom> AddAssign<&BigInt> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     fn add_assign(&mut self, rhs: &BigInt) {
-        self.num += rhs * &self.denom;
+        self.num += &self.denom * rhs;
     }
 }
 
-impl Sub for SmartBigRational {
+impl<D: Denom> Sub for SmartBigRational<D> {
     type Output = Self;
 
     fn sub(mut self, mut rhs: Self) -> Self {
-        let denom = Denom::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
-        SmartBigRational {
+        let denom = D::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
+        Self {
             num: self.num - rhs.num,
             denom,
         }
     }
 }
 
-impl Sub<&SmartBigRational> for SmartBigRational {
+impl<D: Denom> Sub<&Self> for SmartBigRational<D> {
     type Output = Self;
 
-    fn sub(mut self, rhs: &SmartBigRational) -> Self {
+    fn sub(mut self, rhs: &Self) -> Self {
         let mut rhs_num = rhs.num.clone();
-        let denom = Denom::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
-        SmartBigRational {
+        let denom = D::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
+        Self {
             num: self.num - rhs_num,
             denom,
         }
     }
 }
 
-impl Sub for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Sub for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn sub(self, rhs: Self) -> SmartBigRational {
+    fn sub(self, rhs: Self) -> SmartBigRational<D> {
         let mut num = self.num.clone();
         let mut rhs_num = rhs.num.clone();
-        let denom = Denom::normalize(&mut num, &mut rhs_num, &self.denom, &rhs.denom);
+        let denom = D::normalize(&mut num, &mut rhs_num, &self.denom, &rhs.denom);
         SmartBigRational {
             num: num - rhs_num,
             denom,
@@ -426,12 +449,12 @@ impl Sub for &SmartBigRational {
     }
 }
 
-impl Sub<SmartBigRational> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Sub<SmartBigRational<D>> for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn sub(self, mut rhs: SmartBigRational) -> SmartBigRational {
+    fn sub(self, mut rhs: SmartBigRational<D>) -> SmartBigRational<D> {
         let mut num = self.num.clone();
-        let denom = Denom::normalize(&mut num, &mut rhs.num, &self.denom, &rhs.denom);
+        let denom = D::normalize(&mut num, &mut rhs.num, &self.denom, &rhs.denom);
         SmartBigRational {
             num: num - rhs.num,
             denom,
@@ -439,48 +462,57 @@ impl Sub<SmartBigRational> for &SmartBigRational {
     }
 }
 
-impl SubAssign for SmartBigRational {
+impl<D: Denom> SubAssign for SmartBigRational<D> {
     fn sub_assign(&mut self, mut rhs: Self) {
-        self.denom = Denom::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
+        self.denom = D::normalize(&mut self.num, &mut rhs.num, &self.denom, &rhs.denom);
         self.num -= rhs.num;
     }
 }
 
-impl SubAssign<&SmartBigRational> for SmartBigRational {
-    fn sub_assign(&mut self, rhs: &SmartBigRational) {
+impl<D: Denom> SubAssign<&Self> for SmartBigRational<D> {
+    fn sub_assign(&mut self, rhs: &Self) {
         let mut rhs_num = rhs.num.clone();
-        self.denom = Denom::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
+        self.denom = D::normalize(&mut self.num, &mut rhs_num, &self.denom, &rhs.denom);
         self.num -= rhs_num;
     }
 }
 
-impl Sub<BigInt> for SmartBigRational {
+impl<D: Denom> Sub<BigInt> for SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
     type Output = Self;
 
     fn sub(self, mut rhs: BigInt) -> Self {
         rhs *= &self.denom;
-        SmartBigRational {
+        Self {
             num: self.num - rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Sub<&BigInt> for SmartBigRational {
+impl<D: Denom> Sub<&BigInt> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     type Output = Self;
 
     fn sub(self, rhs: &BigInt) -> Self {
-        SmartBigRational {
-            num: self.num - rhs * &self.denom,
+        Self {
+            num: self.num - &self.denom * rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Sub<BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Sub<BigInt> for &SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn sub(self, mut rhs: BigInt) -> SmartBigRational {
+    fn sub(self, mut rhs: BigInt) -> SmartBigRational<D> {
         rhs *= &self.denom;
         SmartBigRational {
             num: &self.num - rhs,
@@ -489,56 +521,68 @@ impl Sub<BigInt> for &SmartBigRational {
     }
 }
 
-impl Sub<&BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Sub<&BigInt> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn sub(self, rhs: &BigInt) -> SmartBigRational {
+    fn sub(self, rhs: &BigInt) -> SmartBigRational<D> {
         SmartBigRational {
-            num: &self.num - rhs * &self.denom,
+            num: &self.num - &self.denom * rhs,
             denom: self.denom.clone(),
         }
     }
 }
 
-impl SubAssign<BigInt> for SmartBigRational {
+impl<D: Denom> SubAssign<BigInt> for SmartBigRational<D>
+where
+    BigInt: for<'a> MulAssign<&'a D>,
+{
     fn sub_assign(&mut self, mut rhs: BigInt) {
         rhs *= &self.denom;
         self.num -= rhs;
     }
 }
 
-impl SubAssign<&BigInt> for SmartBigRational {
+impl<D: Denom> SubAssign<&BigInt> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     fn sub_assign(&mut self, rhs: &BigInt) {
-        self.num -= rhs * &self.denom;
+        self.num -= &self.denom * rhs;
     }
 }
 
-impl Mul for SmartBigRational {
+impl<D: Denom> Mul for SmartBigRational<D> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num * rhs.num,
             denom: self.denom * rhs.denom,
         }
     }
 }
 
-impl Mul<&SmartBigRational> for SmartBigRational {
+impl<D: Denom> Mul<&Self> for SmartBigRational<D> {
     type Output = Self;
 
-    fn mul(self, rhs: &SmartBigRational) -> Self {
-        SmartBigRational {
+    fn mul(self, rhs: &Self) -> Self {
+        Self {
             num: self.num * &rhs.num,
             denom: self.denom * &rhs.denom,
         }
     }
 }
 
-impl Mul for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Mul for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn mul(self, rhs: Self) -> SmartBigRational {
+    fn mul(self, rhs: Self) -> SmartBigRational<D> {
         SmartBigRational {
             num: &self.num * &rhs.num,
             denom: &self.denom * &rhs.denom,
@@ -546,10 +590,13 @@ impl Mul for &SmartBigRational {
     }
 }
 
-impl Mul<SmartBigRational> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Mul<SmartBigRational<D>> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn mul(self, rhs: SmartBigRational) -> SmartBigRational {
+    fn mul(self, rhs: SmartBigRational<D>) -> SmartBigRational<D> {
         SmartBigRational {
             num: &self.num * rhs.num,
             denom: &self.denom * rhs.denom,
@@ -557,46 +604,46 @@ impl Mul<SmartBigRational> for &SmartBigRational {
     }
 }
 
-impl MulAssign for SmartBigRational {
+impl<D: Denom> MulAssign for SmartBigRational<D> {
     fn mul_assign(&mut self, rhs: Self) {
         self.num *= rhs.num;
         self.denom *= rhs.denom;
     }
 }
 
-impl MulAssign<&SmartBigRational> for SmartBigRational {
-    fn mul_assign(&mut self, rhs: &SmartBigRational) {
+impl<D: Denom> MulAssign<&Self> for SmartBigRational<D> {
+    fn mul_assign(&mut self, rhs: &Self) {
         self.num *= &rhs.num;
         self.denom *= &rhs.denom;
     }
 }
 
-impl Mul<BigInt> for SmartBigRational {
+impl<D: Denom> Mul<BigInt> for SmartBigRational<D> {
     type Output = Self;
 
     fn mul(self, rhs: BigInt) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num * rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Mul<&BigInt> for SmartBigRational {
+impl<D: Denom> Mul<&BigInt> for SmartBigRational<D> {
     type Output = Self;
 
     fn mul(self, rhs: &BigInt) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num * rhs,
             denom: self.denom,
         }
     }
 }
 
-impl Mul<BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Mul<BigInt> for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn mul(self, rhs: BigInt) -> SmartBigRational {
+    fn mul(self, rhs: BigInt) -> SmartBigRational<D> {
         SmartBigRational {
             num: &self.num * rhs,
             denom: self.denom.clone(),
@@ -604,10 +651,10 @@ impl Mul<BigInt> for &SmartBigRational {
     }
 }
 
-impl Mul<&BigInt> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Mul<&BigInt> for &SmartBigRational<D> {
+    type Output = SmartBigRational<D>;
 
-    fn mul(self, rhs: &BigInt) -> SmartBigRational {
+    fn mul(self, rhs: &BigInt) -> SmartBigRational<D> {
         SmartBigRational {
             num: &self.num * rhs,
             denom: self.denom.clone(),
@@ -615,148 +662,166 @@ impl Mul<&BigInt> for &SmartBigRational {
     }
 }
 
-impl MulAssign<BigInt> for SmartBigRational {
+impl<D: Denom> MulAssign<BigInt> for SmartBigRational<D> {
     fn mul_assign(&mut self, rhs: BigInt) {
         self.num *= rhs;
     }
 }
 
-impl MulAssign<&BigInt> for SmartBigRational {
+impl<D: Denom> MulAssign<&BigInt> for SmartBigRational<D> {
     fn mul_assign(&mut self, rhs: &BigInt) {
         self.num *= rhs;
     }
 }
 
-impl Div for SmartBigRational {
+impl<D: Denom> Div for SmartBigRational<D> {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self {
         let (rhs_sign, rhs_num) = rhs.num.into_parts();
-        let rhs_denom = BigInt::from_biguint(rhs_sign, BigUint::from(rhs.denom));
-        SmartBigRational {
+        let rhs_denom = BigInt::from_biguint(rhs_sign, rhs.denom.into());
+        Self {
             num: self.num * rhs_denom,
-            denom: self.denom * Denom::from(rhs_num),
+            denom: self.denom * D::from(rhs_num),
         }
     }
 }
 
-impl Div<&SmartBigRational> for SmartBigRational {
+impl<D: Denom> Div<&Self> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     type Output = Self;
 
-    fn div(self, rhs: &SmartBigRational) -> Self {
-        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), BigUint::from(&rhs.denom));
-        SmartBigRational {
+    fn div(self, rhs: &Self) -> Self {
+        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), (&rhs.denom).into());
+        Self {
             num: self.num * rhs_denom,
-            denom: self.denom * Denom::from(rhs.num.magnitude()),
+            denom: self.denom * D::from(rhs.num.magnitude()),
         }
     }
 }
 
-impl Div for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Div for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn div(self, rhs: Self) -> SmartBigRational {
-        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), BigUint::from(&rhs.denom));
+    fn div(self, rhs: Self) -> SmartBigRational<D> {
+        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), (&rhs.denom).into());
         SmartBigRational {
             num: &self.num * rhs_denom,
-            denom: &self.denom * Denom::from(rhs.num.magnitude()),
+            denom: &self.denom * D::from(rhs.num.magnitude()),
         }
     }
 }
 
-impl Div<SmartBigRational> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Div<SmartBigRational<D>> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
-    fn div(self, rhs: SmartBigRational) -> SmartBigRational {
+    fn div(self, rhs: SmartBigRational<D>) -> SmartBigRational<D> {
         let (rhs_sign, rhs_num) = rhs.num.into_parts();
-        let rhs_denom = BigInt::from_biguint(rhs_sign, BigUint::from(rhs.denom));
+        let rhs_denom = BigInt::from_biguint(rhs_sign, rhs.denom.into());
         SmartBigRational {
             num: &self.num * rhs_denom,
-            denom: &self.denom * Denom::from(rhs_num),
+            denom: &self.denom * D::from(rhs_num),
         }
     }
 }
 
-impl DivAssign for SmartBigRational {
+impl<D: Denom> DivAssign for SmartBigRational<D> {
     fn div_assign(&mut self, rhs: Self) {
         let (rhs_sign, rhs_num) = rhs.num.into_parts();
-        let rhs_denom = BigInt::from_biguint(rhs_sign, BigUint::from(rhs.denom));
+        let rhs_denom = BigInt::from_biguint(rhs_sign, rhs.denom.into());
         self.num *= rhs_denom;
-        self.denom *= Denom::from(rhs_num);
+        self.denom *= D::from(rhs_num);
     }
 }
 
-impl DivAssign<&SmartBigRational> for SmartBigRational {
-    fn div_assign(&mut self, rhs: &SmartBigRational) {
-        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), BigUint::from(&rhs.denom));
+impl<D: Denom> DivAssign<&Self> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    fn div_assign(&mut self, rhs: &Self) {
+        let rhs_denom = BigInt::from_biguint(rhs.num.sign(), (&rhs.denom).into());
         self.num *= rhs_denom;
-        self.denom *= Denom::from(rhs.num.magnitude());
+        self.denom *= D::from(rhs.num.magnitude());
     }
 }
 
-impl Div<BigUint> for SmartBigRational {
+impl<D: Denom> Div<BigUint> for SmartBigRational<D> {
     type Output = Self;
 
     #[expect(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: BigUint) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num,
-            denom: self.denom * Denom::from(rhs),
+            denom: self.denom * D::from(rhs),
         }
     }
 }
 
-impl Div<&BigUint> for SmartBigRational {
+impl<D: Denom> Div<&BigUint> for SmartBigRational<D> {
     type Output = Self;
 
     #[expect(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: &BigUint) -> Self {
-        SmartBigRational {
+        Self {
             num: self.num,
-            denom: self.denom * Denom::from(rhs),
+            denom: self.denom * D::from(rhs),
         }
     }
 }
 
-impl Div<BigUint> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Div<BigUint> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
     #[expect(clippy::suspicious_arithmetic_impl)]
-    fn div(self, rhs: BigUint) -> SmartBigRational {
+    fn div(self, rhs: BigUint) -> SmartBigRational<D> {
         SmartBigRational {
             num: self.num.clone(),
-            denom: &self.denom * Denom::from(rhs),
+            denom: &self.denom * D::from(rhs),
         }
     }
 }
 
-impl Div<&BigUint> for &SmartBigRational {
-    type Output = SmartBigRational;
+impl<D: Denom> Div<&BigUint> for &SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    type Output = SmartBigRational<D>;
 
     #[expect(clippy::suspicious_arithmetic_impl)]
-    fn div(self, rhs: &BigUint) -> SmartBigRational {
+    fn div(self, rhs: &BigUint) -> SmartBigRational<D> {
         SmartBigRational {
             num: self.num.clone(),
-            denom: &self.denom * Denom::from(rhs),
+            denom: &self.denom * D::from(rhs),
         }
     }
 }
 
-impl DivAssign<BigUint> for SmartBigRational {
+impl<D: Denom> DivAssign<BigUint> for SmartBigRational<D> {
     #[expect(clippy::suspicious_op_assign_impl)]
     fn div_assign(&mut self, rhs: BigUint) {
-        self.denom *= Denom::from(rhs);
+        self.denom *= D::from(rhs);
     }
 }
 
-impl DivAssign<&BigUint> for SmartBigRational {
+impl<D: Denom> DivAssign<&BigUint> for SmartBigRational<D> {
     #[expect(clippy::suspicious_op_assign_impl)]
     fn div_assign(&mut self, rhs: &BigUint) {
-        self.denom *= Denom::from(rhs);
+        self.denom *= D::from(rhs);
     }
 }
 
-impl Sum for SmartBigRational {
+impl<D: Denom> Sum for SmartBigRational<D> {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -765,16 +830,16 @@ impl Sum for SmartBigRational {
     }
 }
 
-impl<'a> Sum<&'a SmartBigRational> for SmartBigRational {
+impl<'a, D: Denom> Sum<&'a Self> for SmartBigRational<D> {
     fn sum<I>(iter: I) -> Self
     where
-        I: Iterator<Item = &'a SmartBigRational>,
+        I: Iterator<Item = &'a Self>,
     {
         iter.fold(Self::zero(), |acc, x| acc + x)
     }
 }
 
-impl Product for SmartBigRational {
+impl<D: Denom> Product for SmartBigRational<D> {
     fn product<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -783,10 +848,10 @@ impl Product for SmartBigRational {
     }
 }
 
-impl<'a> Product<&'a SmartBigRational> for SmartBigRational {
+impl<'a, D: Denom> Product<&'a Self> for SmartBigRational<D> {
     fn product<I>(iter: I) -> Self
     where
-        I: Iterator<Item = &'a SmartBigRational>,
+        I: Iterator<Item = &'a Self>,
     {
         iter.fold(Self::one(), |acc, x| acc * x)
     }
@@ -797,7 +862,7 @@ mod tests {
     use super::*;
     use rand::seq::IndexedRandom;
 
-    fn get_positive_test_values() -> Vec<SmartBigRational> {
+    fn get_positive_test_values() -> Vec<SmartBigRational<Denom24>> {
         let mut result = Vec::new();
         for i in 0..=30 {
             result.push(SmartBigRational::ratio(1 << i, 1u32));
@@ -858,8 +923,8 @@ mod tests {
     #[test]
     fn test_is_zero() {
         let test_values = get_positive_test_values();
-        assert!(SmartBigRational::ZERO.is_zero());
-        assert!(!SmartBigRational::ONE.is_zero());
+        assert!(SmartBigRational::<Denom24>::ZERO.is_zero());
+        assert!(!SmartBigRational::<Denom24>::ONE.is_zero());
         loop_check1(&test_values, |a| {
             assert!(!a.is_zero(), "{a} is zero");
         });
