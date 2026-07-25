@@ -411,7 +411,7 @@ impl Denom {
     ) -> [u8; Self::NUM_PRIMES] {
         let mut primes = [0; Self::NUM_PRIMES];
         for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let product = this[i] as u32 * exponent;
+            let product = (this[i] as u32).checked_mul(exponent).unwrap();
             if product <= u8::MAX as u32 {
                 primes[i] = product as u8;
             } else {

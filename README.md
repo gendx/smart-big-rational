@@ -1,14 +1,14 @@
 # SmartBigRational: a big rational type optimized for addition, subtraction and multiplication
 
 [![Crate](https://img.shields.io/crates/v/smart-big-rational.svg?logo=rust)](https://crates.io/crates/smart-big-rational)
-[![Documentation](https://img.shields.io/docsrs/smart-big-rational/0.1.0?logo=rust)](https://docs.rs/smart-big-rational/0.1.0/)
-[![Minimum Rust 1.87.0](https://img.shields.io/crates/msrv/smart-big-rational/0.1.0.svg?logo=rust&color=orange)](https://releases.rs/docs/1.87.0/)
-[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/smart-big-rational?category=code&branch=0.1.0)](https://github.com/gendx/smart-big-rational/tree/0.1.0)
-[![Dependencies](https://deps.rs/crate/smart-big-rational/0.1.0/status.svg)](https://deps.rs/crate/smart-big-rational/0.1.0)
-[![License](https://img.shields.io/crates/l/smart-big-rational/0.1.0.svg)](https://github.com/gendx/smart-big-rational/blob/0.1.0/LICENSE)
-[![Codecov](https://codecov.io/gh/gendx/smart-big-rational/branch/0.1.0/graph/badge.svg)](https://codecov.io/gh/gendx/smart-big-rational/tree/0.1.0)
-[![Build Status](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml/badge.svg?branch=0.1.0)](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml)
-[![Test Status](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml/badge.svg?branch=0.1.0)](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml)
+[![Documentation](https://img.shields.io/docsrs/smart-big-rational/0.1.1?logo=rust)](https://docs.rs/smart-big-rational/0.1.1/)
+[![Minimum Rust 1.87.0](https://img.shields.io/crates/msrv/smart-big-rational/0.1.1.svg?logo=rust&color=orange)](https://releases.rs/docs/1.87.0/)
+[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/smart-big-rational?category=code&branch=0.1.1)](https://github.com/gendx/smart-big-rational/tree/0.1.1)
+[![Dependencies](https://deps.rs/crate/smart-big-rational/0.1.1/status.svg)](https://deps.rs/crate/smart-big-rational/0.1.1)
+[![License](https://img.shields.io/crates/l/smart-big-rational/0.1.1.svg)](https://github.com/gendx/smart-big-rational/blob/0.1.1/LICENSE)
+[![Codecov](https://codecov.io/gh/gendx/smart-big-rational/branch/0.1.1/graph/badge.svg)](https://codecov.io/gh/gendx/smart-big-rational/tree/0.1.1)
+[![Build Status](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml/badge.svg?branch=0.1.1)](https://github.com/gendx/smart-big-rational/actions/workflows/build.yml)
+[![Test Status](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml/badge.svg?branch=0.1.1)](https://github.com/gendx/smart-big-rational/actions/workflows/tests.yml)
 
 This Rust library provides the `SmartBigRational` type, similar to the `num`
 crate's
