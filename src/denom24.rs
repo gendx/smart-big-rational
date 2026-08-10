@@ -46,11 +46,13 @@ impl Denom for Denom24 {
         self.into()
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn normalize(lnum: &mut BigInt, rnum: &mut BigInt, ldenom: &Self, rdenom: &Self) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
         let mut ltmp = 1_usize;
         let mut rtmp = 1_usize;
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             let lcount = ldenom.primes[i];
             let rcount = rdenom.primes[i];
             match lcount.cmp(&rcount) {
@@ -106,7 +108,8 @@ impl Denom for Denom24 {
             }
         }
 
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
+        'outer: for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             if self.primes[i] != 0 {
                 let p = BigInt::from(p);
                 while self.primes[i] != 0 {
@@ -127,14 +130,28 @@ impl Denom for Denom24 {
 
 impl Denom24 {
     const NUM_PRIMES: usize = 24;
-    const PRIMES: [usize; Self::NUM_PRIMES] = [
-        2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89,
+    const ODD_PRIMES: [usize; Self::NUM_PRIMES - 1] = [
+        3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89,
     ];
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_now(mut x: BigUint) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = BigUint::from(p);
+
+        let mut count2 = x.trailing_zeros().unwrap();
+        if count2 != 0 {
+            x >>= count2;
+            if count2 <= u8::MAX as u64 {
+                primes[0] = count2 as u8;
+                count2 = 0;
+            } else {
+                primes[0] = u8::MAX;
+                count2 -= u8::MAX as u64;
+            }
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = BigUint::from(Self::ODD_PRIMES[i - 1]);
             while primes[i] != u8::MAX {
                 let (quo, rem) = x.div_rem(&p);
                 if !rem.is_zero() {
@@ -148,14 +165,26 @@ impl Denom24 {
             }
         }
 
-        let remainder = if x.is_one() { None } else { Some(x) };
+        let remainder = if x.is_one() && count2 == 0 {
+            None
+        } else {
+            Some(x << count2)
+        };
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_u8(mut x: u8) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = p as u8;
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1] as u8;
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -172,10 +201,18 @@ impl Denom24 {
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_u16(mut x: u16) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = p as u16;
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1] as u16;
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -192,10 +229,18 @@ impl Denom24 {
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_u32(mut x: u32) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = p as u32;
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1] as u32;
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -212,10 +257,18 @@ impl Denom24 {
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_u64(mut x: u64) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = p as u64;
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1] as u64;
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -232,10 +285,18 @@ impl Denom24 {
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_u128(mut x: u128) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
-            let p = p as u128;
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1] as u128;
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -252,9 +313,18 @@ impl Denom24 {
         Self { primes, remainder }
     }
 
+    #[expect(clippy::needless_range_loop)]
     fn decompose_usize(mut x: usize) -> Self {
         let mut primes = [0; Self::NUM_PRIMES];
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        'outer: for i in 1..Self::NUM_PRIMES {
+            let p = Self::ODD_PRIMES[i - 1];
             while primes[i] != u8::MAX {
                 if !x.is_multiple_of(p) {
                     break;
@@ -281,7 +351,8 @@ impl Denom24 {
             Some(x) => x,
         };
 
-        'outer: for (i, &p) in Self::PRIMES.iter().enumerate() {
+        'outer: for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             if !mask[i] || primes[i] == u8::MAX {
                 continue;
             }
@@ -316,7 +387,7 @@ impl Denom24 {
         // TODO: use a for loop once supported in `const fn` context.
         let mut i = 0;
         while x > 1 && i < Self::NUM_PRIMES {
-            let p = Self::PRIMES[i];
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             while x.is_multiple_of(p) {
                 x /= p;
                 primes[i] = primes[i].checked_add(1).unwrap();
@@ -447,7 +518,8 @@ impl Denom24 {
         remainder: &mut Option<BigUint>,
     ) -> [u8; Self::NUM_PRIMES] {
         let mut primes = [0; Self::NUM_PRIMES];
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             let product = (this[i] as u32).strict_mul(exponent);
             if product <= u8::MAX as u32 {
                 primes[i] = product as u8;
@@ -469,7 +541,8 @@ impl Denom24 {
         remainder: &mut Option<BigUint>,
     ) -> [u8; Self::NUM_PRIMES] {
         let mut primes = [0; Self::NUM_PRIMES];
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             let sum = lhs[i] as u32 + rhs[i] as u32;
             if sum <= u8::MAX as u32 {
                 primes[i] = sum as u8;
@@ -492,7 +565,8 @@ impl Denom24 {
     ) -> (Self, [bool; Self::NUM_PRIMES]) {
         let mut primes = [0; Self::NUM_PRIMES];
         let mut mask = [false; Self::NUM_PRIMES];
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             mask[i] = num[i] == u8::MAX;
             if num[i] >= denom[i] {
                 primes[i] = num[i] - denom[i];
@@ -613,7 +687,11 @@ impl From<Denom24> for BigUint {
         };
         let mut tmp = 1_usize;
         for (i, &count) in value.primes.iter().enumerate() {
-            let p = Denom24::PRIMES[i];
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             for _ in 0..count {
                 match tmp.checked_mul(p) {
                     Some(prod) => tmp = prod,
@@ -636,7 +714,11 @@ impl From<&Denom24> for BigUint {
         };
         let mut tmp = 1_usize;
         for (i, &count) in value.primes.iter().enumerate() {
-            let p = Denom24::PRIMES[i];
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             for _ in 0..count {
                 match tmp.checked_mul(p) {
                     Some(prod) => tmp = prod,
@@ -1000,7 +1082,12 @@ impl Mul<Denom24> for BigInt {
 
     fn mul(mut self, rhs: Denom24) -> Self {
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut self, &mut tmp, p, count);
@@ -1020,7 +1107,12 @@ impl Mul<&Denom24> for BigInt {
 
     fn mul(mut self, rhs: &Denom24) -> Self {
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut self, &mut tmp, p, count);
@@ -1041,7 +1133,12 @@ impl Mul<Denom24> for &BigInt {
     fn mul(self, rhs: Denom24) -> BigInt {
         let mut this = self.clone();
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut this, &mut tmp, p, count);
@@ -1062,7 +1159,12 @@ impl Mul<&Denom24> for &BigInt {
     fn mul(self, rhs: &Denom24) -> BigInt {
         let mut this = self.clone();
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut this, &mut tmp, p, count);
@@ -1082,7 +1184,8 @@ impl Mul<BigInt> for Denom24 {
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
         let mut tmp = 1_usize;
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             let count = self.primes[i];
             if count != 0 {
                 Self::accum_pow(&mut rhs, &mut tmp, p, count);
@@ -1103,7 +1206,8 @@ impl Mul<&BigInt> for Denom24 {
     fn mul(self, rhs: &BigInt) -> BigInt {
         let mut rhs = rhs.clone();
         let mut tmp = 1_usize;
-        for (i, &p) in Self::PRIMES.iter().enumerate() {
+        for i in 0..Self::NUM_PRIMES {
+            let p = if i == 0 { 2 } else { Self::ODD_PRIMES[i - 1] };
             let count = self.primes[i];
             if count != 0 {
                 Self::accum_pow(&mut rhs, &mut tmp, p, count);
@@ -1123,7 +1227,12 @@ impl Mul<BigInt> for &Denom24 {
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = self.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut rhs, &mut tmp, p, count);
@@ -1144,7 +1253,12 @@ impl Mul<&BigInt> for &Denom24 {
     fn mul(self, rhs: &BigInt) -> BigInt {
         let mut rhs = rhs.clone();
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = self.primes[i];
             if count != 0 {
                 Denom24::accum_pow(&mut rhs, &mut tmp, p, count);
@@ -1162,7 +1276,12 @@ impl Mul<&BigInt> for &Denom24 {
 impl MulAssign<Denom24> for BigInt {
     fn mul_assign(&mut self, rhs: Denom24) {
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(self, &mut tmp, p, count);
@@ -1179,7 +1298,12 @@ impl MulAssign<Denom24> for BigInt {
 impl MulAssign<&Denom24> for BigInt {
     fn mul_assign(&mut self, rhs: &Denom24) {
         let mut tmp = 1_usize;
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let count = rhs.primes[i];
             if count != 0 {
                 Denom24::accum_pow(self, &mut tmp, p, count);
@@ -1221,7 +1345,12 @@ mod tests {
             let bigi = BigUint::from(i);
             let x = Denom24::from(&bigi);
             let mut recomposed = x.remainder.unwrap_or_else(BigUint::one);
-            for (i, &prime) in Denom24::PRIMES.iter().enumerate() {
+            for i in 0..Denom24::NUM_PRIMES {
+                let prime = if i == 0 {
+                    2
+                } else {
+                    Denom24::ODD_PRIMES[i - 1]
+                };
                 for _ in 0..x.primes[i] {
                     recomposed *= prime;
                 }
@@ -1272,7 +1401,12 @@ mod tests {
 
     #[test]
     fn test_decompose_prime_powers() {
-        for (i, &p) in Denom24::PRIMES.iter().enumerate() {
+        for i in 0..Denom24::NUM_PRIMES {
+            let p = if i == 0 {
+                2
+            } else {
+                Denom24::ODD_PRIMES[i - 1]
+            };
             let p = BigUint::from(p);
             for power in 1..=255 {
                 assert_eq!(
