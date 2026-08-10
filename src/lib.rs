@@ -23,6 +23,7 @@
 
 mod denom;
 mod denom24;
+pub(crate) mod primes;
 
 pub use denom::{Denom, DenomRef};
 pub use denom24::Denom24;
