@@ -1,0 +1,13 @@
+on: [push, pull_request]
+name: Build benchmarks
+jobs:
+  build_benches:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - name: Build
+        run: cargo bench --no-run --verbose --all
