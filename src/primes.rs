@@ -13,3 +13,9 @@
 // limitations under the License.
 
 include!(concat!(env!("OUT_DIR"), "/primes.rs"));
+
+pub fn known_odd_prime_factor_indices(x: usize) -> Option<impl Iterator<Item = (u16, u16)>> {
+    ODD_FACTOR_INDICES
+        .get(x / 2)
+        .map(|array| array.iter().copied().filter(|(p, _)| *p != 0))
+}

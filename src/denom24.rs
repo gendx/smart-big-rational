@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::primes::ODD_PRIMES;
+use crate::primes::{ODD_PRIMES, known_odd_prime_factor_indices};
 use crate::{Denom, DenomRef};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
@@ -140,7 +140,20 @@ impl<const NUM_PRIMES: usize> Denom for DenomArray<NUM_PRIMES> {
 impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
     const _CHECK: () = assert!(NUM_PRIMES <= ODD_PRIMES.len());
 
-    fn decompose_now(mut x: BigUint) -> Self {
+    fn decompose(mut x: BigUint) -> Self {
+        let bits = x.bits();
+        if bits <= 8 {
+            return Self::decompose_u8(x.try_into().unwrap());
+        } else if bits <= 16 {
+            return Self::decompose_u16(x.try_into().unwrap());
+        } else if bits <= 32 {
+            return Self::decompose_u32(x.try_into().unwrap());
+        } else if bits <= 64 {
+            return Self::decompose_u64(x.try_into().unwrap());
+        } else if bits <= 128 {
+            return Self::decompose_u128(x.try_into().unwrap());
+        }
+
         let mut primes = [0; NUM_PRIMES];
 
         let mut count2 = x.trailing_zeros().unwrap();
@@ -178,6 +191,31 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         Self { primes, remainder }
     }
 
+    fn decompose_known_factors(
+        mut primes: [u8; NUM_PRIMES],
+        factor_indices: impl Iterator<Item = (u16, u16)>,
+    ) -> Self {
+        let mut remainder = 1_usize;
+        for (index, count) in factor_indices {
+            let index = index as usize;
+            if index < NUM_PRIMES {
+                primes[index] += count as u8;
+            } else {
+                let p = ODD_PRIMES[index - 1] as usize;
+                for _ in 0..count {
+                    remainder *= p;
+                }
+            }
+        }
+
+        let remainder = if remainder == 1 {
+            None
+        } else {
+            Some(remainder.into())
+        };
+        Self { primes, remainder }
+    }
+
     fn decompose_u8(mut x: u8) -> Self {
         let mut primes = [0; NUM_PRIMES];
 
@@ -187,22 +225,8 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
             primes[0] = count2 as u8;
         }
 
-        'outer: for i in 1..NUM_PRIMES {
-            let p = ODD_PRIMES[i - 1] as u8;
-            while primes[i] != u8::MAX {
-                if !x.is_multiple_of(p) {
-                    break;
-                }
-                x /= p;
-                primes[i] += 1;
-                if x == 1 {
-                    break 'outer;
-                }
-            }
-        }
-
-        let remainder = if x == 1 { None } else { Some(x.into()) };
-        Self { primes, remainder }
+        // 8-bit integers always fit in the look-up table.
+        Self::decompose_known_factors(primes, known_odd_prime_factor_indices(x.into()).unwrap())
     }
 
     fn decompose_u16(mut x: u16) -> Self {
@@ -217,6 +241,11 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1];
             while primes[i] != u8::MAX {
+                // Use look-up table as soon as the remainder is small enough.
+                if let Some(iter) = known_odd_prime_factor_indices(x.into()) {
+                    return Self::decompose_known_factors(primes, iter);
+                }
+
                 if !x.is_multiple_of(p) {
                     break;
                 }
@@ -244,6 +273,13 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as u32;
             while primes[i] != u8::MAX {
+                // Use look-up table as soon as the remainder is small enough.
+                if let Ok(xx) = x.try_into()
+                    && let Some(iter) = known_odd_prime_factor_indices(xx)
+                {
+                    return Self::decompose_known_factors(primes, iter);
+                }
+
                 if !x.is_multiple_of(p) {
                     break;
                 }
@@ -271,6 +307,13 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as u64;
             while primes[i] != u8::MAX {
+                // Use look-up table as soon as the remainder is small enough.
+                if let Ok(xx) = x.try_into()
+                    && let Some(iter) = known_odd_prime_factor_indices(xx)
+                {
+                    return Self::decompose_known_factors(primes, iter);
+                }
+
                 if !x.is_multiple_of(p) {
                     break;
                 }
@@ -298,6 +341,13 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as u128;
             while primes[i] != u8::MAX {
+                // Use look-up table as soon as the remainder is small enough.
+                if let Ok(xx) = x.try_into()
+                    && let Some(iter) = known_odd_prime_factor_indices(xx)
+                {
+                    return Self::decompose_known_factors(primes, iter);
+                }
+
                 if !x.is_multiple_of(p) {
                     break;
                 }
@@ -325,6 +375,11 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as usize;
             while primes[i] != u8::MAX {
+                // Use look-up table as soon as the remainder is small enough.
+                if let Some(iter) = known_odd_prime_factor_indices(x) {
+                    return Self::decompose_known_factors(primes, iter);
+                }
+
                 if !x.is_multiple_of(p) {
                     break;
                 }
@@ -340,6 +395,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         Self { primes, remainder }
     }
 
+    /// Decomposes the given remainder using only primes whose bit mask is set.
     fn decompose_mask(
         remainder: &mut Option<BigUint>,
         primes: &mut [u8; NUM_PRIMES],
@@ -518,7 +574,7 @@ impl<const NUM_PRIMES: usize> From<BigUint> for DenomArray<NUM_PRIMES> {
         if value.is_zero() {
             panic!("Attempted to create a denominator of zero");
         }
-        Self::decompose_now(value)
+        Self::decompose(value)
     }
 }
 
@@ -527,7 +583,7 @@ impl<const NUM_PRIMES: usize> From<&BigUint> for DenomArray<NUM_PRIMES> {
         if value.is_zero() {
             panic!("Attempted to create a denominator of zero");
         }
-        Self::decompose_now(value.clone())
+        Self::decompose(value.clone())
     }
 }
 
