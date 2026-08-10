@@ -22,11 +22,11 @@
 #![forbid(missing_docs, unsafe_code)]
 
 mod denom;
-mod denom24;
+mod denom_array;
 pub(crate) mod primes;
 
 pub use denom::{Denom, DenomRef};
-pub use denom24::Denom24;
+pub use denom_array::{DenomArray, DenomArray24};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 use num_traits::{One, Pow, Zero};
@@ -64,8 +64,8 @@ impl<D: Denom> SmartBigRational<D> {
     /// ```
     /// # use num_bigint::BigInt;
     /// # use num_rational::BigRational;
-    /// # use smart_big_rational::{Denom24, SmartBigRational};
-    /// let x = SmartBigRational::<Denom24>::ratio(2, 3u32);
+    /// # use smart_big_rational::{DenomArray24, SmartBigRational};
+    /// let x = SmartBigRational::<DenomArray24>::ratio(2, 3u32);
     ///
     /// assert_eq!(
     ///     BigRational::from(x),
@@ -863,7 +863,7 @@ mod tests {
     use super::*;
     use rand::seq::IndexedRandom;
 
-    fn get_positive_test_values() -> Vec<SmartBigRational<Denom24>> {
+    fn get_positive_test_values() -> Vec<SmartBigRational<DenomArray24>> {
         let mut result = Vec::new();
         for i in 0..=30 {
             result.push(SmartBigRational::ratio(1 << i, 1u32));
@@ -924,8 +924,8 @@ mod tests {
     #[test]
     fn test_is_zero() {
         let test_values = get_positive_test_values();
-        assert!(SmartBigRational::<Denom24>::ZERO.is_zero());
-        assert!(!SmartBigRational::<Denom24>::ONE.is_zero());
+        assert!(SmartBigRational::<DenomArray24>::ZERO.is_zero());
+        assert!(!SmartBigRational::<DenomArray24>::ONE.is_zero());
         loop_check1(&test_values, |a| {
             assert!(!a.is_zero(), "{a} is zero");
         });

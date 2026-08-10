@@ -34,7 +34,7 @@ pub struct DenomArray<const NUM_PRIMES: usize> {
 /// Denominator representation that decomposes an integer as a product of the
 /// first 24 primes (up to 89), multiplied by a regular big integer when that's
 /// not sufficient.
-pub type Denom24 = DenomArray<24>;
+pub type DenomArray24 = DenomArray<24>;
 
 impl<const NUM_PRIMES: usize> DenomRef<DenomArray<NUM_PRIMES>> for &DenomArray<NUM_PRIMES> {}
 
@@ -1241,7 +1241,7 @@ mod tests {
     fn test_decompose_is_correct() {
         for i in 1_usize..=1000 {
             let bigi = BigUint::from(i);
-            let x = Denom24::from(&bigi);
+            let x = DenomArray24::from(&bigi);
             let mut recomposed = x.remainder.unwrap_or_else(BigUint::one);
             for i in 0..24 {
                 let prime = if i == 0 { 2 } else { ODD_PRIMES[i - 1] };
@@ -1256,8 +1256,8 @@ mod tests {
     #[test]
     fn test_decompose_known_values() {
         assert_eq!(
-            Denom24::from(BigUint::from(128_usize)),
-            Denom24 {
+            DenomArray24::from(BigUint::from(128_usize)),
+            DenomArray24 {
                 primes: [
                     7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ],
@@ -1265,8 +1265,8 @@ mod tests {
             }
         );
         assert_eq!(
-            Denom24::from(BigUint::from(89_usize)),
-            Denom24 {
+            DenomArray24::from(BigUint::from(89_usize)),
+            DenomArray24 {
                 primes: [
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
                 ],
@@ -1274,8 +1274,8 @@ mod tests {
             }
         );
         assert_eq!(
-            Denom24::from(BigUint::from(97_usize)),
-            Denom24 {
+            DenomArray24::from(BigUint::from(97_usize)),
+            DenomArray24 {
                 primes: [
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ],
@@ -1283,8 +1283,8 @@ mod tests {
             }
         );
         assert_eq!(
-            Denom24::from(BigUint::from(97000_usize)),
-            Denom24 {
+            DenomArray24::from(BigUint::from(97000_usize)),
+            DenomArray24 {
                 primes: [
                     3, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ],
@@ -1300,8 +1300,8 @@ mod tests {
             let p = BigUint::from(p);
             for power in 1..=255 {
                 assert_eq!(
-                    Denom24::from(p.pow(power as u32)),
-                    Denom24 {
+                    DenomArray24::from(p.pow(power as u32)),
+                    DenomArray24 {
                         primes: std::array::from_fn(|j| if i == j { power } else { 0 }),
                         remainder: None,
                     }
@@ -1309,8 +1309,8 @@ mod tests {
             }
             for power in 1..=64 {
                 assert_eq!(
-                    Denom24::from(p.pow(255 + power)),
-                    Denom24 {
+                    DenomArray24::from(p.pow(255 + power)),
+                    DenomArray24 {
                         primes: std::array::from_fn(|j| if i == j { 255 } else { 0 }),
                         remainder: Some(p.pow(power)),
                     }
@@ -1323,10 +1323,10 @@ mod tests {
     fn test_mul_prime_powers() {
         let p = BigUint::from(2u32);
         for a in 1..=256 {
-            let denom_a = Denom24::from(p.pow(a));
+            let denom_a = DenomArray24::from(p.pow(a));
             for b in 1..=256 {
-                let denom_b = Denom24::from(p.pow(b));
-                let denom_ab = Denom24::from(p.pow(a + b));
+                let denom_b = DenomArray24::from(p.pow(b));
+                let denom_ab = DenomArray24::from(p.pow(a + b));
                 assert_eq!(&denom_a * denom_b, denom_ab);
             }
         }
@@ -1336,10 +1336,10 @@ mod tests {
     fn test_div_prime_powers() {
         let p = BigUint::from(2u32);
         for a in 1..=256 {
-            let denom_a = Denom24::from(p.pow(a));
+            let denom_a = DenomArray24::from(p.pow(a));
             for b in 1..=256 {
-                let denom_b = Denom24::from(p.pow(b));
-                let denom_ab = Denom24::from(p.pow(a + b));
+                let denom_b = DenomArray24::from(p.pow(b));
+                let denom_ab = DenomArray24::from(p.pow(a + b));
                 assert_eq!(denom_ab / denom_b, denom_a);
             }
         }
@@ -1349,7 +1349,7 @@ mod tests {
     fn test_to_biguint() {
         for i in 1_usize..=1000 {
             let bigi = BigUint::from(i);
-            let x = Denom24::from(&bigi);
+            let x = DenomArray24::from(&bigi);
             assert_eq!(x.to_biguint(), bigi);
         }
     }
@@ -1357,12 +1357,12 @@ mod tests {
     #[test]
     fn test_product() {
         let values = (100..200)
-            .map(|i: usize| Denom24::from(BigUint::from(i)))
+            .map(|i: usize| DenomArray24::from(BigUint::from(i)))
             .collect::<Vec<_>>();
         for (i, x) in values.iter().enumerate().map(|(i, x)| (i + 100, x)) {
             for (j, y) in values.iter().enumerate().map(|(j, y)| (j + 100, y)) {
                 let z = x * y;
-                assert_eq!(z, Denom24::from(BigUint::from(i * j)));
+                assert_eq!(z, DenomArray24::from(BigUint::from(i * j)));
                 for k in 0..24 {
                     assert_eq!(z.primes[k], x.primes[k] + y.primes[k]);
                 }
@@ -1373,13 +1373,13 @@ mod tests {
     #[test]
     fn test_normalize() {
         let values = (100..200)
-            .map(|i: usize| Denom24::from(BigUint::from(i)))
+            .map(|i: usize| DenomArray24::from(BigUint::from(i)))
             .collect::<Vec<_>>();
         for x in &values {
             for y in &values {
                 let mut xnum = BigInt::one();
                 let mut ynum = BigInt::one();
-                let lcm = Denom24::normalize(&mut xnum, &mut ynum, x, y);
+                let lcm = DenomArray24::normalize(&mut xnum, &mut ynum, x, y);
                 let lcm_bigint = lcm.to_biguint();
                 let xnum = xnum.to_biguint().unwrap();
                 let ynum = ynum.to_biguint().unwrap();
@@ -1396,9 +1396,9 @@ mod tests {
     #[test]
     fn test_gcd_reduce() {
         let mut num = BigInt::from(-3 * 97);
-        let mut denom = Denom24::from(BigUint::from(3u32 * 5 * 97));
+        let mut denom = DenomArray24::from(BigUint::from(3u32 * 5 * 97));
         denom.gcd_reduce(&mut num);
         assert_eq!(num, BigInt::from(-1));
-        assert_eq!(denom, Denom24::from(BigUint::from(5u32)));
+        assert_eq!(denom, DenomArray24::from(BigUint::from(5u32)));
     }
 }
