@@ -30,21 +30,26 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// first `NUM_PRIMES` primes (up to 2^16), multiplied by a regular big integer
 /// when that's not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DenomSparseU16<const NUM_PRIMES: usize> {
+pub struct DenomSparseU16<const NUM_PRIMES: usize, const NUM_INLINE: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small primes must
     // saturate the primes array before overflowing into the remainder.
-    primes: SmallVec<[(u16, u16); 8]>,
+    primes: SmallVec<[(u16, u16); NUM_INLINE]>,
     remainder: Option<BigUint>,
 }
 
 /// Denominator representation that decomposes an integer as a product of the
 /// first 6542 primes (up to 0xfff1), multiplied by a regular big integer when
 /// that's not sufficient.
-pub type DenomSparse6542 = DenomSparseU16<6542>;
+pub type DenomSparse6542 = DenomSparseU16<6542, 8>;
 
-impl<const NUM_PRIMES: usize> DenomRef<DenomSparseU16<NUM_PRIMES>> for &DenomSparseU16<NUM_PRIMES> {}
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize>
+    DenomRef<DenomSparseU16<NUM_PRIMES, NUM_INLINE>> for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+}
 
-impl<const NUM_PRIMES: usize> Denom for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Denom
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     const ONE: Self = Self {
         primes: SmallVec::new_const(),
         remainder: None,
@@ -138,7 +143,7 @@ impl<const NUM_PRIMES: usize> Denom for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
     fn decompose(mut x: BigUint) -> Self {
         const {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
@@ -201,7 +206,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     }
 
     fn decompose_known_factors(
-        mut primes: SmallVec<[(u16, u16); 8]>,
+        mut primes: SmallVec<[(u16, u16); NUM_INLINE]>,
         p: u16,
         mut pcount: u16,
         factor_indices: impl Iterator<Item = (u16, u16)>,
@@ -492,7 +497,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     /// Decomposes the given remainder using only primes whose bit mask is set.
     fn decompose_mask(
         remainder: &mut Option<BigUint>,
-        primes: &mut SmallVec<[(u16, u16); 8]>,
+        primes: &mut SmallVec<[(u16, u16); NUM_INLINE]>,
         mask: &[u16],
     ) {
         let x: &mut BigUint = match remainder {
@@ -586,7 +591,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
         lhs: &[(u16, u16)],
         rhs: &[(u16, u16)],
         remainder: &mut Option<BigUint>,
-    ) -> SmallVec<[(u16, u16); 8]> {
+    ) -> SmallVec<[(u16, u16); NUM_INLINE]> {
         let mut primes = SmallVec::new();
 
         for (p, (lcount, rcount)) in Zip(
@@ -612,7 +617,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
         num: &[(u16, u16)],
         denom: &[(u16, u16)],
         mut remainder: Option<BigUint>,
-    ) -> (Self, SmallVec<[u16; 8]>) {
+    ) -> (Self, SmallVec<[u16; NUM_INLINE]>) {
         let mut primes = SmallVec::new();
         let mut mask = SmallVec::new();
         let mut tmp = 1_usize;
@@ -650,7 +655,9 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<u8> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<u8>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: u8) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -659,7 +666,9 @@ impl<const NUM_PRIMES: usize> From<u8> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<u16> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<u16>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: u16) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -668,7 +677,9 @@ impl<const NUM_PRIMES: usize> From<u16> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<u32> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<u32>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: u32) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -677,7 +688,9 @@ impl<const NUM_PRIMES: usize> From<u32> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<u64> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<u64>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: u64) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -686,7 +699,9 @@ impl<const NUM_PRIMES: usize> From<u64> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<u128> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<u128>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: u128) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -695,7 +710,9 @@ impl<const NUM_PRIMES: usize> From<u128> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<usize> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<usize>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: usize) -> Self {
         if value == 0 {
             panic!("Attempted to create a denominator of zero");
@@ -704,7 +721,9 @@ impl<const NUM_PRIMES: usize> From<usize> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<BigUint> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<BigUint>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: BigUint) -> Self {
         if value.is_zero() {
             panic!("Attempted to create a denominator of zero");
@@ -713,7 +732,9 @@ impl<const NUM_PRIMES: usize> From<BigUint> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<&BigUint> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<&BigUint>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn from(value: &BigUint) -> Self {
         if value.is_zero() {
             panic!("Attempted to create a denominator of zero");
@@ -722,8 +743,10 @@ impl<const NUM_PRIMES: usize> From<&BigUint> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<DenomSparseU16<NUM_PRIMES>> for BigUint {
-    fn from(value: DenomSparseU16<NUM_PRIMES>) -> BigUint {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for BigUint
+{
+    fn from(value: DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> BigUint {
         let mut result = match value.remainder {
             Some(x) => x,
             None => BigUint::ONE,
@@ -745,8 +768,10 @@ impl<const NUM_PRIMES: usize> From<DenomSparseU16<NUM_PRIMES>> for BigUint {
     }
 }
 
-impl<const NUM_PRIMES: usize> From<&DenomSparseU16<NUM_PRIMES>> for BigUint {
-    fn from(value: &DenomSparseU16<NUM_PRIMES>) -> BigUint {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> From<&DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for BigUint
+{
+    fn from(value: &DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> BigUint {
         let mut result = match &value.remainder {
             Some(x) => x.clone(),
             None => BigUint::ONE,
@@ -768,13 +793,17 @@ impl<const NUM_PRIMES: usize> From<&DenomSparseU16<NUM_PRIMES>> for BigUint {
     }
 }
 
-impl<const NUM_PRIMES: usize> One for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> One
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn one() -> Self {
         Self::ONE
     }
 }
 
-impl<const NUM_PRIMES: usize> num_traits::Pow<u32> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> num_traits::Pow<u32>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = Self;
 
     fn pow(mut self, rhs: u32) -> Self {
@@ -786,21 +815,25 @@ impl<const NUM_PRIMES: usize> num_traits::Pow<u32> for DenomSparseU16<NUM_PRIMES
     }
 }
 
-impl<const NUM_PRIMES: usize> num_traits::Pow<u32> for &DenomSparseU16<NUM_PRIMES> {
-    type Output = DenomSparseU16<NUM_PRIMES>;
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> num_traits::Pow<u32>
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    type Output = DenomSparseU16<NUM_PRIMES, NUM_INLINE>;
 
-    fn pow(self, rhs: u32) -> DenomSparseU16<NUM_PRIMES> {
+    fn pow(self, rhs: u32) -> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
         if rhs == 0 {
             return DenomSparseU16::ONE;
         }
         let mut primes = self.primes.clone();
         let mut remainder = self.remainder.clone();
-        DenomSparseU16::<NUM_PRIMES>::pow_primes(&mut primes, rhs, &mut remainder);
+        DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::pow_primes(&mut primes, rhs, &mut remainder);
         DenomSparseU16 { primes, remainder }
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -815,7 +848,9 @@ impl<const NUM_PRIMES: usize> Mul for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<&Self> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<&Self>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = Self;
 
     fn mul(self, rhs: &Self) -> Self {
@@ -830,39 +865,54 @@ impl<const NUM_PRIMES: usize> Mul<&Self> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul for &DenomSparseU16<NUM_PRIMES> {
-    type Output = DenomSparseU16<NUM_PRIMES>;
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    type Output = DenomSparseU16<NUM_PRIMES, NUM_INLINE>;
 
-    fn mul(self, rhs: Self) -> DenomSparseU16<NUM_PRIMES> {
+    fn mul(self, rhs: Self) -> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
         let mut remainder = match (&self.remainder, &rhs.remainder) {
             (None, None) => None,
             (None, Some(r)) => Some(r.clone()),
             (Some(l), None) => Some(l.clone()),
             (Some(l), Some(r)) => Some(l * r),
         };
-        let primes =
-            DenomSparseU16::<NUM_PRIMES>::mul_primes(&self.primes, &rhs.primes, &mut remainder);
+        let primes = DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::mul_primes(
+            &self.primes,
+            &rhs.primes,
+            &mut remainder,
+        );
         DenomSparseU16 { primes, remainder }
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<DenomSparseU16<NUM_PRIMES>> for &DenomSparseU16<NUM_PRIMES> {
-    type Output = DenomSparseU16<NUM_PRIMES>;
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    type Output = DenomSparseU16<NUM_PRIMES, NUM_INLINE>;
 
-    fn mul(self, rhs: DenomSparseU16<NUM_PRIMES>) -> DenomSparseU16<NUM_PRIMES> {
+    fn mul(
+        self,
+        rhs: DenomSparseU16<NUM_PRIMES, NUM_INLINE>,
+    ) -> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
         let mut remainder = match (&self.remainder, rhs.remainder) {
             (None, None) => None,
             (None, Some(r)) => Some(r),
             (Some(l), None) => Some(l.clone()),
             (Some(l), Some(r)) => Some(l * r),
         };
-        let primes =
-            DenomSparseU16::<NUM_PRIMES>::mul_primes(&self.primes, &rhs.primes, &mut remainder);
+        let primes = DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::mul_primes(
+            &self.primes,
+            &rhs.primes,
+            &mut remainder,
+        );
         DenomSparseU16 { primes, remainder }
     }
 }
 
-impl<const NUM_PRIMES: usize> MulAssign for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> MulAssign
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn mul_assign(&mut self, rhs: Self) {
         match (&mut self.remainder, rhs.remainder) {
             (_, None) => (),
@@ -873,7 +923,9 @@ impl<const NUM_PRIMES: usize> MulAssign for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> MulAssign<&Self> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> MulAssign<&Self>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     fn mul_assign(&mut self, rhs: &Self) {
         match (&mut self.remainder, &rhs.remainder) {
             (_, None) => (),
@@ -884,7 +936,9 @@ impl<const NUM_PRIMES: usize> MulAssign<&Self> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Div for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Div
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = Self;
 
     /// Divides this denominator by the other one.
@@ -922,7 +976,9 @@ impl<const NUM_PRIMES: usize> Div for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Div<&Self> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Div<&Self>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = Self;
 
     /// Divides this denominator by the other one.
@@ -960,20 +1016,22 @@ impl<const NUM_PRIMES: usize> Div<&Self> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Div for &DenomSparseU16<NUM_PRIMES> {
-    type Output = DenomSparseU16<NUM_PRIMES>;
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Div
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    type Output = DenomSparseU16<NUM_PRIMES, NUM_INLINE>;
 
     /// Divides this denominator by the other one.
     ///
     /// This function panics if the other one doesn't divide this one.
-    fn div(self, rhs: Self) -> DenomSparseU16<NUM_PRIMES> {
+    fn div(self, rhs: Self) -> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
         let (
             DenomSparseU16 {
                 mut primes,
                 remainder: rhs_remainder,
             },
             mask,
-        ) = DenomSparseU16::<NUM_PRIMES>::div_primes(
+        ) = DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::div_primes(
             &self.primes,
             &rhs.primes,
             rhs.remainder.clone(),
@@ -997,25 +1055,38 @@ impl<const NUM_PRIMES: usize> Div for &DenomSparseU16<NUM_PRIMES> {
             }
         };
 
-        DenomSparseU16::<NUM_PRIMES>::decompose_mask(&mut remainder, &mut primes, &mask);
+        DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::decompose_mask(
+            &mut remainder,
+            &mut primes,
+            &mask,
+        );
         DenomSparseU16 { primes, remainder }
     }
 }
 
-impl<const NUM_PRIMES: usize> Div<DenomSparseU16<NUM_PRIMES>> for &DenomSparseU16<NUM_PRIMES> {
-    type Output = DenomSparseU16<NUM_PRIMES>;
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Div<DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    type Output = DenomSparseU16<NUM_PRIMES, NUM_INLINE>;
 
     /// Divides this denominator by the other one.
     ///
     /// This function panics if the other one doesn't divide this one.
-    fn div(self, rhs: DenomSparseU16<NUM_PRIMES>) -> DenomSparseU16<NUM_PRIMES> {
+    fn div(
+        self,
+        rhs: DenomSparseU16<NUM_PRIMES, NUM_INLINE>,
+    ) -> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
         let (
             DenomSparseU16 {
                 mut primes,
                 remainder: rhs_remainder,
             },
             mask,
-        ) = DenomSparseU16::<NUM_PRIMES>::div_primes(&self.primes, &rhs.primes, rhs.remainder);
+        ) = DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::div_primes(
+            &self.primes,
+            &rhs.primes,
+            rhs.remainder,
+        );
 
         let mut remainder = match (&self.remainder, rhs_remainder) {
             (None, None) => None,
@@ -1035,12 +1106,18 @@ impl<const NUM_PRIMES: usize> Div<DenomSparseU16<NUM_PRIMES>> for &DenomSparseU1
             }
         };
 
-        DenomSparseU16::<NUM_PRIMES>::decompose_mask(&mut remainder, &mut primes, &mask);
+        DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::decompose_mask(
+            &mut remainder,
+            &mut primes,
+            &mask,
+        );
         DenomSparseU16 { primes, remainder }
     }
 }
 
-impl<const NUM_PRIMES: usize> DivAssign for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> DivAssign
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     /// Divides this denominator by the other one.
     ///
     /// This function panics if the other one doesn't divide this one.
@@ -1078,7 +1155,9 @@ impl<const NUM_PRIMES: usize> DivAssign for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> DivAssign<&Self> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> DivAssign<&Self>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     /// Divides this denominator by the other one.
     ///
     /// This function panics if the other one doesn't divide this one.
@@ -1116,13 +1195,15 @@ impl<const NUM_PRIMES: usize> DivAssign<&Self> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<DenomSparseU16<NUM_PRIMES>> for BigInt {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for BigInt
+{
     type Output = Self;
 
-    fn mul(mut self, rhs: DenomSparseU16<NUM_PRIMES>) -> Self {
+    fn mul(mut self, rhs: DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> Self {
         let mut tmp = 1_usize;
         for (p, count) in rhs.primes.into_iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut self, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut self, &mut tmp, p, count);
         }
 
         self *= tmp;
@@ -1133,13 +1214,15 @@ impl<const NUM_PRIMES: usize> Mul<DenomSparseU16<NUM_PRIMES>> for BigInt {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<&DenomSparseU16<NUM_PRIMES>> for BigInt {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<&DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for BigInt
+{
     type Output = Self;
 
-    fn mul(mut self, rhs: &DenomSparseU16<NUM_PRIMES>) -> Self {
+    fn mul(mut self, rhs: &DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> Self {
         let mut tmp = 1_usize;
         for &(p, count) in rhs.primes.iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut self, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut self, &mut tmp, p, count);
         }
 
         self *= tmp;
@@ -1150,14 +1233,16 @@ impl<const NUM_PRIMES: usize> Mul<&DenomSparseU16<NUM_PRIMES>> for BigInt {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<DenomSparseU16<NUM_PRIMES>> for &BigInt {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for &BigInt
+{
     type Output = BigInt;
 
-    fn mul(self, rhs: DenomSparseU16<NUM_PRIMES>) -> BigInt {
+    fn mul(self, rhs: DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> BigInt {
         let mut this = self.clone();
         let mut tmp = 1_usize;
         for (p, count) in rhs.primes.into_iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut this, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut this, &mut tmp, p, count);
         }
 
         this *= tmp;
@@ -1168,14 +1253,16 @@ impl<const NUM_PRIMES: usize> Mul<DenomSparseU16<NUM_PRIMES>> for &BigInt {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<&DenomSparseU16<NUM_PRIMES>> for &BigInt {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<&DenomSparseU16<NUM_PRIMES, NUM_INLINE>>
+    for &BigInt
+{
     type Output = BigInt;
 
-    fn mul(self, rhs: &DenomSparseU16<NUM_PRIMES>) -> BigInt {
+    fn mul(self, rhs: &DenomSparseU16<NUM_PRIMES, NUM_INLINE>) -> BigInt {
         let mut this = self.clone();
         let mut tmp = 1_usize;
         for &(p, count) in rhs.primes.iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut this, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut this, &mut tmp, p, count);
         }
 
         this *= tmp;
@@ -1186,7 +1273,9 @@ impl<const NUM_PRIMES: usize> Mul<&DenomSparseU16<NUM_PRIMES>> for &BigInt {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<BigInt> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<BigInt>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = BigInt;
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
@@ -1203,7 +1292,9 @@ impl<const NUM_PRIMES: usize> Mul<BigInt> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<&BigInt> for DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<&BigInt>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = BigInt;
 
     fn mul(self, rhs: &BigInt) -> BigInt {
@@ -1221,13 +1312,15 @@ impl<const NUM_PRIMES: usize> Mul<&BigInt> for DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<BigInt> for &DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<BigInt>
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = BigInt;
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
         let mut tmp = 1_usize;
         for &(p, count) in self.primes.iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut rhs, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut rhs, &mut tmp, p, count);
         }
 
         rhs *= tmp;
@@ -1238,14 +1331,16 @@ impl<const NUM_PRIMES: usize> Mul<BigInt> for &DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> Mul<&BigInt> for &DenomSparseU16<NUM_PRIMES> {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Mul<&BigInt>
+    for &DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
     type Output = BigInt;
 
     fn mul(self, rhs: &BigInt) -> BigInt {
         let mut rhs = rhs.clone();
         let mut tmp = 1_usize;
         for &(p, count) in self.primes.iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(&mut rhs, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(&mut rhs, &mut tmp, p, count);
         }
 
         rhs *= tmp;
@@ -1256,11 +1351,13 @@ impl<const NUM_PRIMES: usize> Mul<&BigInt> for &DenomSparseU16<NUM_PRIMES> {
     }
 }
 
-impl<const NUM_PRIMES: usize> MulAssign<DenomSparseU16<NUM_PRIMES>> for BigInt {
-    fn mul_assign(&mut self, rhs: DenomSparseU16<NUM_PRIMES>) {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize>
+    MulAssign<DenomSparseU16<NUM_PRIMES, NUM_INLINE>> for BigInt
+{
+    fn mul_assign(&mut self, rhs: DenomSparseU16<NUM_PRIMES, NUM_INLINE>) {
         let mut tmp = 1_usize;
         for (p, count) in rhs.primes.into_iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(self, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(self, &mut tmp, p, count);
         }
 
         *self *= tmp;
@@ -1270,11 +1367,13 @@ impl<const NUM_PRIMES: usize> MulAssign<DenomSparseU16<NUM_PRIMES>> for BigInt {
     }
 }
 
-impl<const NUM_PRIMES: usize> MulAssign<&DenomSparseU16<NUM_PRIMES>> for BigInt {
-    fn mul_assign(&mut self, rhs: &DenomSparseU16<NUM_PRIMES>) {
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize>
+    MulAssign<&DenomSparseU16<NUM_PRIMES, NUM_INLINE>> for BigInt
+{
+    fn mul_assign(&mut self, rhs: &DenomSparseU16<NUM_PRIMES, NUM_INLINE>) {
         let mut tmp = 1_usize;
         for &(p, count) in rhs.primes.iter() {
-            DenomSparseU16::<NUM_PRIMES>::accum_pow(self, &mut tmp, p, count);
+            DenomSparseU16::<NUM_PRIMES, NUM_INLINE>::accum_pow(self, &mut tmp, p, count);
         }
 
         *self *= tmp;
@@ -1372,7 +1471,7 @@ mod tests {
     fn test_decompose_to_biguint<const NUM_PRIMES: usize>() {
         for i in 1_usize..=(1 << 20) {
             let bigi = BigUint::from(i);
-            let x = DenomSparseU16::<NUM_PRIMES>::from(&bigi);
+            let x = DenomSparseU16::<NUM_PRIMES, 8>::from(&bigi);
             assert_eq!(x.to_biguint(), bigi);
         }
     }
@@ -1785,7 +1884,7 @@ mod tests {
         for p in std::iter::once(2).chain(ODD_PRIMES).take(NUM_PRIMES) {
             let bigp = BigUint::from(p);
             assert_eq!(
-                DenomSparseU16::<NUM_PRIMES>::from(bigp.pow(100)),
+                DenomSparseU16::<NUM_PRIMES, 8>::from(bigp.pow(100)),
                 DenomSparseU16 {
                     primes: smallvec![(p, 100)],
                     remainder: None,
@@ -1797,10 +1896,10 @@ mod tests {
     fn test_mul_prime_powers<const NUM_PRIMES: usize>() {
         let p = BigUint::from(2u32);
         for a in 1..=256 {
-            let denom_a = DenomSparseU16::<NUM_PRIMES>::from(p.pow(a));
+            let denom_a = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(a));
             for b in 1..=256 {
-                let denom_b = DenomSparseU16::<NUM_PRIMES>::from(p.pow(b));
-                let denom_ab = DenomSparseU16::<NUM_PRIMES>::from(p.pow(a + b));
+                let denom_b = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(b));
+                let denom_ab = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(a + b));
                 assert_eq!(&denom_a * denom_b, denom_ab);
             }
         }
@@ -1809,10 +1908,10 @@ mod tests {
     fn test_div_prime_powers<const NUM_PRIMES: usize>() {
         let p = BigUint::from(2u32);
         for a in 1..=256 {
-            let denom_a = DenomSparseU16::<NUM_PRIMES>::from(p.pow(a));
+            let denom_a = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(a));
             for b in 1..=256 {
-                let denom_b = DenomSparseU16::<NUM_PRIMES>::from(p.pow(b));
-                let denom_ab = DenomSparseU16::<NUM_PRIMES>::from(p.pow(a + b));
+                let denom_b = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(b));
+                let denom_ab = DenomSparseU16::<NUM_PRIMES, 8>::from(p.pow(a + b));
                 assert_eq!(denom_ab / denom_b, denom_a);
             }
         }
@@ -1820,12 +1919,15 @@ mod tests {
 
     fn test_product<const NUM_PRIMES: usize>() {
         let values = (100..200)
-            .map(|i: usize| DenomSparseU16::<NUM_PRIMES>::from(BigUint::from(i)))
+            .map(|i: usize| DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(i)))
             .collect::<Vec<_>>();
         for (i, x) in values.iter().enumerate().map(|(i, x)| (i + 100, x)) {
             for (j, y) in values.iter().enumerate().map(|(j, y)| (j + 100, y)) {
                 let z = x * y;
-                assert_eq!(z, DenomSparseU16::<NUM_PRIMES>::from(BigUint::from(i * j)));
+                assert_eq!(
+                    z,
+                    DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(i * j))
+                );
 
                 for (p, (zcount, (xcount, ycount))) in Zip(
                     z.primes.into_iter().peekable(),
@@ -1847,13 +1949,13 @@ mod tests {
 
     fn test_normalize<const NUM_PRIMES: usize>() {
         let values = (100..200)
-            .map(|i: usize| DenomSparseU16::<NUM_PRIMES>::from(BigUint::from(i)))
+            .map(|i: usize| DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(i)))
             .collect::<Vec<_>>();
         for x in &values {
             for y in &values {
                 let mut xnum = BigInt::one();
                 let mut ynum = BigInt::one();
-                let lcm = DenomSparseU16::<NUM_PRIMES>::normalize(&mut xnum, &mut ynum, x, y);
+                let lcm = DenomSparseU16::<NUM_PRIMES, 8>::normalize(&mut xnum, &mut ynum, x, y);
                 let lcm_bigint = lcm.to_biguint();
                 let xnum = xnum.to_biguint().unwrap();
                 let ynum = ynum.to_biguint().unwrap();
@@ -1881,12 +1983,12 @@ mod tests {
 
     fn test_gcd_reduce<const NUM_PRIMES: usize>() {
         let mut num = BigInt::from(-3 * 97);
-        let mut denom = DenomSparseU16::<NUM_PRIMES>::from(BigUint::from(3u32 * 5 * 97));
+        let mut denom = DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(3u32 * 5 * 97));
         denom.gcd_reduce(&mut num);
         assert_eq!(num, BigInt::from(-1));
         assert_eq!(
             denom,
-            DenomSparseU16::<NUM_PRIMES>::from(BigUint::from(5u32))
+            DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(5u32))
         );
     }
 }

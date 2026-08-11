@@ -81,8 +81,8 @@ mod denom_array {
 mod denom_sparse {
     use smart_big_rational::DenomSparseU16;
 
-    all_benches!(bench24, DenomSparseU16<24>);
-    all_benches!(bench6542, DenomSparseU16<6542>);
+    all_benches!(bench24, DenomSparseU16<24, 8>);
+    all_benches!(bench6542, DenomSparseU16<6542, 8>);
 }
 
 fn decompose_large_prime_u016<D: Denom>(b: &mut Bencher) {
