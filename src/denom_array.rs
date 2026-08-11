@@ -1352,31 +1352,28 @@ mod tests {
         };
     }
 
-    tests!(
-        denom24,
-        24,
-        test_decompose_is_correct,
-        test_decompose_prime_powers,
-        test_mul_prime_powers,
-        test_div_prime_powers,
-        test_to_biguint,
-        test_product,
-        test_normalize,
-        test_gcd_reduce,
-    );
+    macro_rules! all_tests {
+        (
+            $mod:ident,
+            $num_primes:expr
+        ) => {
+            tests!(
+                $mod,
+                $num_primes,
+                test_decompose_is_correct,
+                test_decompose_prime_powers,
+                test_mul_prime_powers,
+                test_div_prime_powers,
+                test_to_biguint,
+                test_product,
+                test_normalize,
+                test_gcd_reduce,
+            );
+        };
+    }
 
-    tests!(
-        denom6541,
-        6541,
-        test_decompose_is_correct,
-        test_decompose_prime_powers,
-        test_mul_prime_powers,
-        test_div_prime_powers,
-        test_to_biguint,
-        test_product,
-        test_normalize,
-        test_gcd_reduce,
-    );
+    all_tests!(denom24, 24);
+    all_tests!(denom6541, 6541);
 
     fn test_decompose_is_correct<const NUM_PRIMES: usize>() {
         for i in 1_usize..=1000 {
