@@ -54,7 +54,7 @@ impl<const NUM_PRIMES: usize> Denom for DenomArray<NUM_PRIMES> {
 
     fn normalize(lnum: &mut BigInt, rnum: &mut BigInt, ldenom: &Self, rdenom: &Self) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -110,7 +110,7 @@ impl<const NUM_PRIMES: usize> Denom for DenomArray<NUM_PRIMES> {
 
     fn gcd_reduce(&mut self, num: &mut BigInt) {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         if let Some(remainder) = &mut self.remainder {
@@ -148,7 +148,7 @@ impl<const NUM_PRIMES: usize> Denom for DenomArray<NUM_PRIMES> {
 impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
     fn decompose(mut x: BigUint) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let bits = x.bits();
@@ -206,7 +206,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         factor_indices: impl Iterator<Item = (u16, u16)>,
     ) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut remainder = 1_usize;
@@ -245,7 +245,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
     fn decompose_u16(mut x: u16) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -281,7 +281,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
     fn decompose_u32(mut x: u32) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -319,7 +319,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
     fn decompose_u64(mut x: u64) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -357,7 +357,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
     fn decompose_u128(mut x: u128) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -395,7 +395,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
     fn decompose_usize(mut x: usize) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -436,7 +436,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         mask: [bool; NUM_PRIMES],
     ) {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let x: &mut BigUint = match remainder {
@@ -488,7 +488,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         remainder: &mut Option<BigUint>,
     ) -> [u8; NUM_PRIMES] {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -515,7 +515,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         remainder: &mut Option<BigUint>,
     ) -> [u8; NUM_PRIMES] {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -542,7 +542,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
         mut remainder: Option<BigUint>,
     ) -> (Self, [bool; NUM_PRIMES]) {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut primes = [0; NUM_PRIMES];
@@ -640,7 +640,7 @@ impl<const NUM_PRIMES: usize> From<&BigUint> for DenomArray<NUM_PRIMES> {
 impl<const NUM_PRIMES: usize> From<DenomArray<NUM_PRIMES>> for BigUint {
     fn from(value: DenomArray<NUM_PRIMES>) -> BigUint {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut result = match value.remainder {
@@ -671,7 +671,7 @@ impl<const NUM_PRIMES: usize> From<DenomArray<NUM_PRIMES>> for BigUint {
 impl<const NUM_PRIMES: usize> From<&DenomArray<NUM_PRIMES>> for BigUint {
     fn from(value: &DenomArray<NUM_PRIMES>) -> BigUint {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut result = match &value.remainder {
@@ -1048,7 +1048,7 @@ impl<const NUM_PRIMES: usize> Mul<DenomArray<NUM_PRIMES>> for BigInt {
 
     fn mul(mut self, rhs: DenomArray<NUM_PRIMES>) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1077,7 +1077,7 @@ impl<const NUM_PRIMES: usize> Mul<&DenomArray<NUM_PRIMES>> for BigInt {
 
     fn mul(mut self, rhs: &DenomArray<NUM_PRIMES>) -> Self {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1106,7 +1106,7 @@ impl<const NUM_PRIMES: usize> Mul<DenomArray<NUM_PRIMES>> for &BigInt {
 
     fn mul(self, rhs: DenomArray<NUM_PRIMES>) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut this = self.clone();
@@ -1136,7 +1136,7 @@ impl<const NUM_PRIMES: usize> Mul<&DenomArray<NUM_PRIMES>> for &BigInt {
 
     fn mul(self, rhs: &DenomArray<NUM_PRIMES>) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut this = self.clone();
@@ -1166,7 +1166,7 @@ impl<const NUM_PRIMES: usize> Mul<BigInt> for DenomArray<NUM_PRIMES> {
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1195,7 +1195,7 @@ impl<const NUM_PRIMES: usize> Mul<&BigInt> for DenomArray<NUM_PRIMES> {
 
     fn mul(self, rhs: &BigInt) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut rhs = rhs.clone();
@@ -1225,7 +1225,7 @@ impl<const NUM_PRIMES: usize> Mul<BigInt> for &DenomArray<NUM_PRIMES> {
 
     fn mul(self, mut rhs: BigInt) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1254,7 +1254,7 @@ impl<const NUM_PRIMES: usize> Mul<&BigInt> for &DenomArray<NUM_PRIMES> {
 
     fn mul(self, rhs: &BigInt) -> BigInt {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut rhs = rhs.clone();
@@ -1282,7 +1282,7 @@ impl<const NUM_PRIMES: usize> Mul<&BigInt> for &DenomArray<NUM_PRIMES> {
 impl<const NUM_PRIMES: usize> MulAssign<DenomArray<NUM_PRIMES>> for BigInt {
     fn mul_assign(&mut self, rhs: DenomArray<NUM_PRIMES>) {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1308,7 +1308,7 @@ impl<const NUM_PRIMES: usize> MulAssign<DenomArray<NUM_PRIMES>> for BigInt {
 impl<const NUM_PRIMES: usize> MulAssign<&DenomArray<NUM_PRIMES>> for BigInt {
     fn mul_assign(&mut self, rhs: &DenomArray<NUM_PRIMES>) {
         const {
-            assert!(NUM_PRIMES <= ODD_PRIMES.len());
+            assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
         let mut tmp = 1_usize;
@@ -1373,7 +1373,7 @@ mod tests {
     }
 
     all_tests!(denom24, 24);
-    all_tests!(denom6541, 6541);
+    all_tests!(denom6542, 6542);
 
     fn test_decompose_is_correct<const NUM_PRIMES: usize>() {
         for i in 1_usize..=1000 {

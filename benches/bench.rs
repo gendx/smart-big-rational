@@ -75,7 +75,7 @@ mod denom_array {
     use smart_big_rational::DenomArray;
 
     all_benches!(bench24, DenomArray<24>);
-    all_benches!(bench6541, DenomArray<6541>);
+    all_benches!(bench6542, DenomArray<6542>);
 }
 
 fn decompose_large_prime_u016<D: Denom>(b: &mut Bencher) {
