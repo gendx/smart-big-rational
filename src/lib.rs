@@ -23,11 +23,13 @@
 
 mod denom;
 mod denom_array;
+mod denom_sparse;
 mod primes;
 mod util;
 
 pub use denom::{Denom, DenomRef};
 pub use denom_array::{DenomArray, DenomArray24};
+pub use denom_sparse::{DenomSparse6542, DenomSparseU16};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 use num_traits::{One, Pow, Zero};
