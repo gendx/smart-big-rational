@@ -21,6 +21,7 @@ use crate::{Denom, DenomRef};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Zero};
+use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::iter::Peekable;
 use std::ops::{Div, DivAssign, Mul, MulAssign};
@@ -32,7 +33,7 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 pub struct DenomSparseU16<const NUM_PRIMES: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small primes must
     // saturate the primes array before overflowing into the remainder.
-    primes: Vec<(u16, u16)>,
+    primes: SmallVec<[(u16, u16); 8]>,
     remainder: Option<BigUint>,
 }
 
@@ -45,7 +46,7 @@ impl<const NUM_PRIMES: usize> DenomRef<DenomSparseU16<NUM_PRIMES>> for &DenomSpa
 
 impl<const NUM_PRIMES: usize> Denom for DenomSparseU16<NUM_PRIMES> {
     const ONE: Self = Self {
-        primes: Vec::new(),
+        primes: SmallVec::new_const(),
         remainder: None,
     };
 
@@ -58,7 +59,7 @@ impl<const NUM_PRIMES: usize> Denom for DenomSparseU16<NUM_PRIMES> {
     }
 
     fn normalize(lnum: &mut BigInt, rnum: &mut BigInt, ldenom: &Self, rdenom: &Self) -> Self {
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
         let mut ltmp = 1_usize;
         let mut rtmp = 1_usize;
 
@@ -156,7 +157,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             return Self::decompose_u128(x.try_into().unwrap());
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let mut count2 = x.trailing_zeros().unwrap();
         if count2 != 0 {
@@ -200,7 +201,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     }
 
     fn decompose_known_factors(
-        mut primes: Vec<(u16, u16)>,
+        mut primes: SmallVec<[(u16, u16); 8]>,
         p: u16,
         mut pcount: u16,
         factor_indices: impl Iterator<Item = (u16, u16)>,
@@ -238,7 +239,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     }
 
     fn decompose_u8(mut x: u8) -> Self {
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -260,7 +261,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -307,7 +308,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -357,7 +358,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -407,7 +408,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -451,7 +452,7 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
         }
 
-        let mut primes = Vec::new();
+        let mut primes = SmallVec::new();
 
         let count2 = x.trailing_zeros();
         if count2 != 0 {
@@ -489,13 +490,17 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
     }
 
     /// Decomposes the given remainder using only primes whose bit mask is set.
-    fn decompose_mask(remainder: &mut Option<BigUint>, primes: &mut Vec<(u16, u16)>, mask: &[u16]) {
+    fn decompose_mask(
+        remainder: &mut Option<BigUint>,
+        primes: &mut SmallVec<[(u16, u16); 8]>,
+        mask: &[u16],
+    ) {
         let x: &mut BigUint = match remainder {
             None => return,
             Some(x) => x,
         };
 
-        let mut new_primes = Vec::new();
+        let mut new_primes = SmallVec::new();
         'outer: for (p, (mut count, flag)) in Zip(
             primes.iter().copied().peekable(),
             mask.iter().copied().map(|p| (p, true)).peekable(),
@@ -581,8 +586,8 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
         lhs: &[(u16, u16)],
         rhs: &[(u16, u16)],
         remainder: &mut Option<BigUint>,
-    ) -> Vec<(u16, u16)> {
-        let mut primes = Vec::new();
+    ) -> SmallVec<[(u16, u16); 8]> {
+        let mut primes = SmallVec::new();
 
         for (p, (lcount, rcount)) in Zip(
             lhs.iter().copied().peekable(),
@@ -607,9 +612,9 @@ impl<const NUM_PRIMES: usize> DenomSparseU16<NUM_PRIMES> {
         num: &[(u16, u16)],
         denom: &[(u16, u16)],
         mut remainder: Option<BigUint>,
-    ) -> (Self, Vec<u16>) {
-        let mut primes = Vec::new();
-        let mut mask = Vec::new();
+    ) -> (Self, SmallVec<[u16; 8]>) {
+        let mut primes = SmallVec::new();
+        let mut mask = SmallVec::new();
         let mut tmp = 1_usize;
 
         for (p, (num_count, denom_count)) in Zip(
@@ -1323,6 +1328,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use smallvec::smallvec;
 
     macro_rules! tests {
         (
@@ -1385,28 +1391,28 @@ mod tests {
         assert_eq!(
             DenomSparse6542::from(0xfff1_u16),
             DenomSparse6542 {
-                primes: vec![(0xfff1, 1)],
+                primes: smallvec![(0xfff1, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(0xffff_fffb_u32),
             DenomSparse6542 {
-                primes: vec![],
+                primes: smallvec![],
                 remainder: Some(0xffff_fffb_u32.into()),
             }
         );
         assert_eq!(
             DenomSparse6542::from(0xffff_ffff_ffff_ffc5_u64),
             DenomSparse6542 {
-                primes: vec![],
+                primes: smallvec![],
                 remainder: Some(0xffff_ffff_ffff_ffc5_u64.into()),
             }
         );
         assert_eq!(
             DenomSparse6542::from(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ff61_u128),
             DenomSparse6542 {
-                primes: vec![],
+                primes: smallvec![],
                 remainder: Some(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ff61_u128.into()),
             }
         );
@@ -1422,7 +1428,7 @@ mod tests {
                 0xffff_ffff,
             ])),
             DenomSparse6542 {
-                primes: vec![],
+                primes: smallvec![],
                 remainder: Some(BigUint::from_slice(&[
                     0xffff_ff43,
                     0xffff_ffff,
@@ -1439,21 +1445,21 @@ mod tests {
         assert_eq!(
             DenomSparse6542::from(2u8 * 3 * 5 * 7),
             DenomSparse6542 {
-                primes: vec![(2, 1), (3, 1), (5, 1), (7, 1)],
+                primes: smallvec![(2, 1), (3, 1), (5, 1), (7, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(2u16 * 3 * 5 * 7 * 11 * 13),
             DenomSparse6542 {
-                primes: vec![(2, 1), (3, 1), (5, 1), (7, 1), (11, 1), (13, 1)],
+                primes: smallvec![(2, 1), (3, 1), (5, 1), (7, 1), (11, 1), (13, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(2u32 * 3 * 5 * 7 * 11 * 13 * 17 * 19 * 23),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (2, 1),
                     (3, 1),
                     (5, 1),
@@ -1472,7 +1478,7 @@ mod tests {
                 2u64 * 3 * 5 * 7 * 11 * 13 * 17 * 19 * 23 * 31 * 37 * 41 * 43 * 47 * 53
             ),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (2, 1),
                     (3, 1),
                     (5, 1),
@@ -1521,7 +1527,7 @@ mod tests {
                     * 101,
             ),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (2, 1),
                     (3, 1),
                     (5, 1),
@@ -1608,7 +1614,7 @@ mod tests {
                 .unwrap(),
             ),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (2, 1),
                     (3, 1),
                     (5, 1),
@@ -1667,21 +1673,21 @@ mod tests {
         assert_eq!(
             DenomSparse6542::from(0xfb_u16 * 0xf1),
             DenomSparse6542 {
-                primes: vec![(0xf1, 1), (0xfb, 1)],
+                primes: smallvec![(0xf1, 1), (0xfb, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(0xfff1_u32 * 0xffef),
             DenomSparse6542 {
-                primes: vec![(0xffef, 1), (0xfff1, 1)],
+                primes: smallvec![(0xffef, 1), (0xfff1, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(0xfff1_u64 * 0xffef * 0xffd9 * 0xffc7),
             DenomSparse6542 {
-                primes: vec![(0xffc7, 1), (0xffd9, 1), (0xffef, 1), (0xfff1, 1)],
+                primes: smallvec![(0xffc7, 1), (0xffd9, 1), (0xffef, 1), (0xfff1, 1)],
                 remainder: None,
             }
         );
@@ -1690,7 +1696,7 @@ mod tests {
                 0xfff1_u128 * 0xffef * 0xffd9 * 0xffc7 * 0xffa9 * 0xffa7 * 0xff9d * 0xff8f,
             ),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (0xff8f, 1),
                     (0xff9d, 1),
                     (0xffa7, 1),
@@ -1723,7 +1729,7 @@ mod tests {
                     * 0xff49_u16,
             ),
             DenomSparse6542 {
-                primes: vec![
+                primes: smallvec![
                     (0xff49, 1),
                     (0xff4d, 1),
                     (0xff5b, 1),
@@ -1748,28 +1754,28 @@ mod tests {
         assert_eq!(
             DenomSparse6542::from(BigUint::from(128_usize)),
             DenomSparse6542 {
-                primes: vec![(2, 7)],
+                primes: smallvec![(2, 7)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(BigUint::from(89_usize)),
             DenomSparse6542 {
-                primes: vec![(89, 1)],
+                primes: smallvec![(89, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(BigUint::from(97_usize)),
             DenomSparse6542 {
-                primes: vec![(97, 1)],
+                primes: smallvec![(97, 1)],
                 remainder: None,
             }
         );
         assert_eq!(
             DenomSparse6542::from(BigUint::from(97000_usize)),
             DenomSparse6542 {
-                primes: vec![(2, 3), (5, 3), (97, 1)],
+                primes: smallvec![(2, 3), (5, 3), (97, 1)],
                 remainder: None,
             }
         );
@@ -1781,7 +1787,7 @@ mod tests {
             assert_eq!(
                 DenomSparseU16::<NUM_PRIMES>::from(bigp.pow(100)),
                 DenomSparseU16 {
-                    primes: vec![(p, 100)],
+                    primes: smallvec![(p, 100)],
                     remainder: None,
                 }
             );
