@@ -14,9 +14,11 @@
 
 use std::cmp::Ordering;
 use std::env;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::Write;
 use std::iter::Peekable;
+use std::ops::{Add, AddAssign, Shl, Shr};
 use std::path::Path;
 
 fn main() {
@@ -43,6 +45,81 @@ fn main() {
                 write!(file, "    {p:#x},").unwrap();
             } else {
                 write!(file, " {p:#x},").unwrap();
+            }
+        }
+        writeln!(file).unwrap();
+    }
+    writeln!(file, "];").unwrap();
+
+    writeln!(
+        file,
+        "/// Magic divider constants for odd prime integers until 2^16. {} KiB.",
+        odd_primes.len() >> 9,
+    )
+    .unwrap();
+    writeln!(
+        file,
+        "pub static ODD_PRIME_DIVIDERS_U16: [u16; {}] = [",
+        odd_primes.len(),
+    )
+    .unwrap();
+    for line in odd_primes.chunks(10) {
+        for (i, &p) in line.iter().enumerate() {
+            let q = odd_divider(p);
+            if i == 0 {
+                write!(file, "    {q:#x},").unwrap();
+            } else {
+                write!(file, " {q:#x},").unwrap();
+            }
+        }
+        writeln!(file).unwrap();
+    }
+    writeln!(file, "];").unwrap();
+
+    writeln!(
+        file,
+        "/// Magic divider constants for odd prime integers until 2^16. {} KiB.",
+        odd_primes.len() >> 8,
+    )
+    .unwrap();
+    writeln!(
+        file,
+        "pub static ODD_PRIME_DIVIDERS_U32: [u32; {}] = [",
+        odd_primes.len(),
+    )
+    .unwrap();
+    for line in odd_primes.chunks(10) {
+        for (i, &p) in line.iter().enumerate() {
+            let q = odd_divider(p as u32);
+            if i == 0 {
+                write!(file, "    {q:#x},").unwrap();
+            } else {
+                write!(file, " {q:#x},").unwrap();
+            }
+        }
+        writeln!(file).unwrap();
+    }
+    writeln!(file, "];").unwrap();
+
+    writeln!(
+        file,
+        "/// Magic divider constants for odd prime integers until 2^16. {} KiB.",
+        odd_primes.len() >> 7,
+    )
+    .unwrap();
+    writeln!(
+        file,
+        "pub static ODD_PRIME_DIVIDERS_U64: [u64; {}] = [",
+        odd_primes.len(),
+    )
+    .unwrap();
+    for line in odd_primes.chunks(5) {
+        for (i, &p) in line.iter().enumerate() {
+            let q = odd_divider(p as u64);
+            if i == 0 {
+                write!(file, "    {q:#x},").unwrap();
+            } else {
+                write!(file, " {q:#x},").unwrap();
             }
         }
         writeln!(file).unwrap();
@@ -203,5 +280,121 @@ where
                 }
             },
         }
+    }
+}
+
+fn odd_divider<T>(divisor: T) -> T
+where
+    T: Copy
+        + Eq
+        + Ord
+        + Debug
+        + Add<Output = T>
+        + AddAssign
+        + Shl<u32, Output = T>
+        + Shr<u32, Output = T>
+        + Arithmetic,
+{
+    // Division by 0 is caught here.
+    let log2 = divisor.checked_ilog2().unwrap();
+
+    // See https://rubenvannieuwpoort.nl/posts/division-by-constant-unsigned-integers:
+    //  multiplier = 2^(N+shift) / d
+    //  rem = 2^(N+shift) % d
+    let (multiplier, rem) = T::narrowing_div_rem((T::ZERO, T::ONE << log2), divisor);
+    assert_ne!(multiplier, T::ZERO);
+    assert!(rem > T::ZERO);
+    assert!(rem < divisor);
+
+    // At this point the highest bit of multiplier is set (because we divided
+    // 2^(N+log2(d)) / d), therefore shifting discards it:
+    //  multiplier = 2 * (2^(N+shift) / d) - 2^N
+    assert_eq!(multiplier >> (T::BITS - 1), T::ONE);
+    let mut multiplier = multiplier << 1;
+    let twice_rem = rem << 1;
+    // Use the remainder to adjust the multiplier to:
+    //  multiplier = 2^(N+shift+1) / d - 2^N
+    if twice_rem >= divisor || twice_rem < rem {
+        multiplier += T::ONE;
+    }
+
+    // Lastly, we compute the ceiling of that:
+    //  multiplier = 2^(N+shift+1) / d + 1 - 2^N
+    // Because d isn't a power of 2 (and therefore doesn't divide 2^(N+shift+1)),
+    // this gives:
+    //  multiplier = ceil(2^(N+shift+1) / d) - 2^N
+    multiplier + T::ONE
+}
+
+trait Arithmetic: Sized {
+    const BITS: u32;
+    const ZERO: Self;
+    const ONE: Self;
+
+    /// Returns the base-2 logarithm or `None` if `self` is zero.
+    fn checked_ilog2(self) -> Option<u32>;
+
+    /// Divides (num_lo, num_hi) by denom, returning (quotient, remainder),
+    /// assuming that the quotient fits in Self.
+    fn narrowing_div_rem(num: (Self, Self), denom: Self) -> (Self, Self);
+}
+
+impl Arithmetic for u16 {
+    const BITS: u32 = u16::BITS;
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+
+    #[inline(always)]
+    fn checked_ilog2(self) -> Option<u32> {
+        self.checked_ilog2()
+    }
+
+    #[inline(always)]
+    fn narrowing_div_rem((num_lo, num_hi): (Self, Self), denom: Self) -> (Self, Self) {
+        let a = ((num_hi as u32) << 16) | (num_lo as u32);
+        let b = denom as u32;
+        let quo = a / b;
+        let rem = a.wrapping_sub(quo.wrapping_mul(b));
+        (quo as u16, rem as u16)
+    }
+}
+
+impl Arithmetic for u32 {
+    const BITS: u32 = u32::BITS;
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+
+    #[inline(always)]
+    fn checked_ilog2(self) -> Option<u32> {
+        self.checked_ilog2()
+    }
+
+    #[inline(always)]
+    fn narrowing_div_rem((num_lo, num_hi): (Self, Self), denom: Self) -> (Self, Self) {
+        let a = ((num_hi as u64) << 32) | (num_lo as u64);
+        let b = denom as u64;
+        let quo = a / b;
+        let rem = a.wrapping_sub(quo.wrapping_mul(b));
+        (quo as u32, rem as u32)
+    }
+}
+
+impl Arithmetic for u64 {
+    const BITS: u32 = u64::BITS;
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+
+    #[inline(always)]
+    fn checked_ilog2(self) -> Option<u32> {
+        self.checked_ilog2()
+    }
+
+    #[inline(always)]
+    fn narrowing_div_rem((num_lo, num_hi): (Self, Self), denom: Self) -> (Self, Self) {
+        let a = ((num_hi as u128) << 64) | (num_lo as u128);
+        let b = denom as u128;
+        let quo = a / b;
+        let rem = a.wrapping_sub(quo.wrapping_mul(b));
+        (quo as u64, rem as u64)
     }
 }

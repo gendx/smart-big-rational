@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::primes::{ODD_PRIMES, known_odd_prime_factor_indices};
+use crate::primes::{
+    ODD_PRIME_DIVIDERS_U16, ODD_PRIME_DIVIDERS_U32, ODD_PRIME_DIVIDERS_U64, ODD_PRIMES,
+    known_odd_prime_factor_indices,
+};
+use crate::util::OddDivider;
 use crate::{Denom, DenomRef};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
@@ -186,6 +190,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     break;
                 }
                 x = quo;
+
                 primes[i] += 1;
                 if x.is_one() {
                     break 'outer;
@@ -258,16 +263,23 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1];
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U16[i - 1],
+                shift: p.ilog2(),
+            };
             while primes[i] != u8::MAX {
                 // Use look-up table as soon as the remainder is small enough.
                 if let Some(iter) = known_odd_prime_factor_indices(x.into()) {
                     return Self::decompose_known_factors(primes, iter);
                 }
 
-                if !x.is_multiple_of(p) {
+                let (quo, rem) = divider.div_rem(x);
+                if rem != 0 {
                     break;
                 }
-                x /= p;
+                x = quo;
+
                 primes[i] += 1;
                 if x == 1 {
                     break 'outer;
@@ -294,6 +306,11 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as u32;
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U32[i - 1],
+                shift: p.ilog2(),
+            };
             while primes[i] != u8::MAX {
                 // Use look-up table as soon as the remainder is small enough.
                 if let Ok(xx) = x.try_into()
@@ -302,10 +319,12 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     return Self::decompose_known_factors(primes, iter);
                 }
 
-                if !x.is_multiple_of(p) {
+                let (quo, rem) = divider.div_rem(x);
+                if rem != 0 {
                     break;
                 }
-                x /= p;
+                x = quo;
+
                 primes[i] += 1;
                 if x == 1 {
                     break 'outer;
@@ -332,6 +351,11 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
 
         'outer: for i in 1..NUM_PRIMES {
             let p = ODD_PRIMES[i - 1] as u64;
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U64[i - 1],
+                shift: p.ilog2(),
+            };
             while primes[i] != u8::MAX {
                 // Use look-up table as soon as the remainder is small enough.
                 if let Ok(xx) = x.try_into()
@@ -340,10 +364,12 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     return Self::decompose_known_factors(primes, iter);
                 }
 
-                if !x.is_multiple_of(p) {
+                let (quo, rem) = divider.div_rem(x);
+                if rem != 0 {
                     break;
                 }
-                x /= p;
+                x = quo;
+
                 primes[i] += 1;
                 if x == 1 {
                     break 'outer;
@@ -382,6 +408,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     break;
                 }
                 x /= p;
+
                 primes[i] += 1;
                 if x == 1 {
                     break 'outer;
@@ -418,6 +445,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     break;
                 }
                 x /= p;
+
                 primes[i] += 1;
                 if x == 1 {
                     break 'outer;
@@ -456,6 +484,7 @@ impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
                     break;
                 }
                 *x = quo;
+
                 primes[i] += 1;
                 if x.is_one() {
                     break 'outer;
