@@ -864,9 +864,11 @@ impl<'a, D: Denom> Product<&'a Self> for SmartBigRational<D> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use primes::ODD_PRIMES;
     use rand::seq::IndexedRandom;
+    use std::fmt::Debug;
 
-    fn get_positive_test_values() -> Vec<SmartBigRational<DenomArray24>> {
+    fn get_positive_test_values<D: Denom>() -> Vec<SmartBigRational<D>> {
         let mut result = Vec::new();
         for i in 0..=30 {
             result.push(SmartBigRational::ratio(1 << i, 1u32));
@@ -880,6 +882,13 @@ mod tests {
         for i in 0..=30 {
             result.push(SmartBigRational::ratio(1, 0x7FFF_FFFF - (1u32 << i)));
         }
+        for &p in ODD_PRIMES.iter().take(30) {
+            result.push(SmartBigRational::ratio(1, p));
+        }
+        let prime_product = (0..=30)
+            .map(|i| ODD_PRIMES[i])
+            .fold(BigUint::ONE, |acc, x| acc * x);
+        result.push(SmartBigRational::ratio(1, prime_product));
         result
     }
 
@@ -924,9 +933,62 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_is_zero() {
-        let test_values = get_positive_test_values();
+    macro_rules! tests {
+        (
+            $mod:ident,
+            $denom:ty,
+            $( $case:ident ,)*
+        ) => {
+            mod $mod {
+                use super::*;
+
+                $(
+                    #[test]
+                    fn $case() {
+                        $crate::tests::$case::<$denom>();
+                    }
+                )*
+            }
+        };
+    }
+
+    macro_rules! all_tests {
+        (
+            $mod:ident,
+            $denom:ty
+        ) => {
+            tests!(
+                $mod,
+                $denom,
+                test_is_zero,
+                test_zero_is_add_neutral,
+                test_add_is_commutative,
+                test_add_is_associative,
+                test_opposite,
+                test_sub_self,
+                test_add_sub,
+                test_sub_add,
+                test_one_is_mul_neutral,
+                test_mul_is_commutative,
+                test_mul_is_associative,
+                test_mul_is_distributive,
+                test_one_is_div_neutral,
+                test_div_self,
+                test_mul_div,
+            );
+        };
+    }
+
+    all_tests!(denom_array24, DenomArray<24>);
+    all_tests!(denom_array200, DenomArray<200>);
+    all_tests!(denom_sparse24, DenomSparseU16<24, 8>);
+    all_tests!(denom_sparse6542, DenomSparseU16<6542, 8>);
+
+    fn test_is_zero<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         assert!(SmartBigRational::<DenomArray24>::ZERO.is_zero());
         assert!(!SmartBigRational::<DenomArray24>::ONE.is_zero());
         loop_check1(&test_values, |a| {
@@ -934,9 +996,11 @@ mod tests {
         });
     }
 
-    #[test]
-    fn test_zero_is_add_neutral() {
-        let test_values = get_positive_test_values();
+    fn test_zero_is_add_neutral<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(&(a + SmartBigRational::ZERO), a, "a + 0 != a for {a}");
             assert_eq!(&(SmartBigRational::ZERO + a), a, "0 + a != a for {a}");
@@ -944,17 +1008,21 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_add_is_commutative() {
-        let test_values = get_positive_test_values();
+    fn test_add_is_commutative<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(a + b, b + a, "a + b != b + a for {a}, {b}");
         })
     }
 
-    #[test]
-    fn test_add_is_associative() {
-        let test_values = get_positive_test_values();
+    fn test_add_is_associative<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check3(&test_values, None, |a, b, c| {
             assert_eq!(
                 (a + b) + c,
@@ -964,9 +1032,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_opposite() {
-        let test_values = get_positive_test_values();
+    fn test_opposite<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(&-(-a), a, "-(-a) != a for {a}");
             assert_eq!(
@@ -977,50 +1047,63 @@ mod tests {
         });
     }
 
-    #[test]
-    fn test_sub_self() {
-        let test_values = get_positive_test_values();
+    #[expect(clippy::eq_op)]
+    fn test_sub_self<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(a - a, SmartBigRational::ZERO, "a - a != 0 for {a}");
         });
     }
 
-    #[test]
-    fn test_add_sub() {
-        let test_values = get_positive_test_values();
+    fn test_add_sub<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(&((a + b) - b), a, "(a + b) - b != a for {a}, {b}");
         });
     }
 
-    #[test]
-    fn test_sub_add() {
-        let test_values = get_positive_test_values();
+    fn test_sub_add<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(&((a - b) + b), a, "(a - b) + b != a for {a}, {b}");
         });
     }
 
-    #[test]
-    fn test_one_is_mul_neutral() {
-        let test_values = get_positive_test_values();
+    fn test_one_is_mul_neutral<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(&(a * SmartBigRational::ONE), a, "a * 1 != a for {a}");
             assert_eq!(&(SmartBigRational::ONE * a), a, "1 * a != a for {a}");
         })
     }
 
-    #[test]
-    fn test_mul_is_commutative() {
-        let test_values = get_positive_test_values();
+    fn test_mul_is_commutative<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(a * b, b * a, "a * b != b * a for {a}, {b}");
         })
     }
 
-    #[test]
-    fn test_mul_is_associative() {
-        let test_values = get_positive_test_values();
+    fn test_mul_is_associative<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check3(&test_values, None, |a, b, c| {
             assert_eq!(
                 (a * b) * c,
@@ -1030,9 +1113,11 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_mul_is_distributive() {
-        let test_values = get_positive_test_values();
+    fn test_mul_is_distributive<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check3(&test_values, None, |a, b, c| {
             assert_eq!(
                 a * (b + c),
@@ -1042,25 +1127,32 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_one_is_div_neutral() {
-        let test_values = get_positive_test_values();
+    fn test_one_is_div_neutral<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(&(a / SmartBigRational::ONE), a, "a / 1 != a for {a}");
         })
     }
 
-    #[test]
-    fn test_div_self() {
-        let test_values = get_positive_test_values();
+    #[expect(clippy::eq_op)]
+    fn test_div_self<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check1(&test_values, |a| {
             assert_eq!(a / a, SmartBigRational::ONE, "a / a != 1 for {a}");
         });
     }
 
-    #[test]
-    fn test_mul_div() {
-        let test_values = get_positive_test_values();
+    fn test_mul_div<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(&((a * b) / b), a, "(a * b) / b != a for {a}, {b}");
         });
