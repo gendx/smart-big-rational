@@ -830,7 +830,7 @@ impl<D: Denom> Sum for SmartBigRational<D> {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(Self::zero(), |acc, x| acc + x)
+        iter.fold(Self::ZERO, |acc, x| acc + x)
     }
 }
 
@@ -839,7 +839,7 @@ impl<'a, D: Denom> Sum<&'a Self> for SmartBigRational<D> {
     where
         I: Iterator<Item = &'a Self>,
     {
-        iter.fold(Self::zero(), |acc, x| acc + x)
+        iter.fold(Self::ZERO, |acc, x| acc + x)
     }
 }
 
@@ -848,7 +848,7 @@ impl<D: Denom> Product for SmartBigRational<D> {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(Self::one(), |acc, x| acc * x)
+        iter.fold(Self::ONE, |acc, x| acc * x)
     }
 }
 
@@ -857,7 +857,7 @@ impl<'a, D: Denom> Product<&'a Self> for SmartBigRational<D> {
     where
         I: Iterator<Item = &'a Self>,
     {
-        iter.fold(Self::one(), |acc, x| acc * x)
+        iter.fold(Self::ONE, |acc, x| acc * x)
     }
 }
 
@@ -975,6 +975,8 @@ mod tests {
                 test_one_is_div_neutral,
                 test_div_self,
                 test_mul_div,
+                test_sum,
+                test_product,
             );
         };
     }
@@ -1156,5 +1158,37 @@ mod tests {
         loop_check2(&test_values, |a, b| {
             assert_eq!(&((a * b) / b), a, "(a * b) / b != a for {a}, {b}");
         });
+    }
+
+    fn test_sum<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        let mut expected = SmartBigRational::ZERO;
+        for x in &test_values {
+            expected += x;
+        }
+        assert_eq!(
+            test_values.iter().sum::<SmartBigRational<_>>(),
+            expected,
+            "[x, ..., y].sum() != x + ... + y for {test_values:?}"
+        );
+    }
+
+    fn test_product<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        let mut expected = SmartBigRational::ONE;
+        for x in &test_values {
+            expected *= x;
+        }
+        assert_eq!(
+            test_values.iter().product::<SmartBigRational<_>>(),
+            expected,
+            "[x, ..., y].product() != x * ... * y for {test_values:?}"
+        );
     }
 }
