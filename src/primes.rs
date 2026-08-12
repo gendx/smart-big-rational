@@ -19,3 +19,69 @@ pub fn known_odd_prime_factor_indices(x: usize) -> Option<impl Iterator<Item = (
         .get(x / 2)
         .map(|array| array.iter().copied().filter(|(p, _)| *p != 0))
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::util::OddDivider;
+
+    #[test]
+    fn test_dividers_u16() {
+        for (i, &p) in ODD_PRIMES.iter().enumerate() {
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U16[i],
+                shift: p.ilog2(),
+            };
+            for x in 0..=u16::MAX {
+                let (quo, rem) = divider.div_rem(x);
+                assert_eq!(x / p, quo);
+                assert_eq!(x % p, rem);
+            }
+        }
+    }
+
+    #[test]
+    fn test_dividers_u32() {
+        for (i, &p) in ODD_PRIMES.iter().enumerate() {
+            let p = p as u32;
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U32[i],
+                shift: p.ilog2(),
+            };
+            for x in (0..=u16::MAX as u32)
+                .chain((0..=u16::MAX as u32).map(|x| u32::MAX - x))
+                .chain((0..32).map(|i| 1 << i))
+                .chain((0..32).map(|i| !(1 << i)))
+                .chain((0..32).map(|i| (1 << i) - 1))
+            {
+                let (quo, rem) = divider.div_rem(x);
+                assert_eq!(x / p, quo);
+                assert_eq!(x % p, rem);
+            }
+        }
+    }
+
+    #[test]
+    fn test_dividers_u64() {
+        for (i, &p) in ODD_PRIMES.iter().enumerate() {
+            let p = p as u64;
+            let divider = OddDivider {
+                divisor: p,
+                multiplier: ODD_PRIME_DIVIDERS_U64[i],
+                shift: p.ilog2(),
+            };
+            for x in (0..=u16::MAX as u64)
+                .chain((0..=u16::MAX as u64).map(|x| u64::MAX - x))
+                .chain((0..64).map(|i| 1 << i))
+                .chain((0..64).map(|i| !(1 << i)))
+                .chain((0..64).map(|i| (1 << i) - 1))
+            {
+                let (quo, rem) = divider.div_rem(x);
+                assert_eq!(x / p, quo);
+                assert_eq!(x % p, rem);
+            }
+        }
+    }
+}
