@@ -37,6 +37,14 @@ pub struct DenomSparseU16<const NUM_PRIMES: usize, const NUM_INLINE: usize> {
     remainder: Option<BigUint>,
 }
 
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Default
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    fn default() -> Self {
+        Self::ONE
+    }
+}
+
 /// Denominator representation that decomposes an integer as a product of the
 /// first 6542 primes (up to 0xfff1), multiplied by a regular big integer when
 /// that's not sufficient.

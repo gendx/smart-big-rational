@@ -35,6 +35,12 @@ pub struct DenomArray<const NUM_PRIMES: usize> {
     remainder: Option<BigUint>,
 }
 
+impl<const NUM_PRIMES: usize> Default for DenomArray<NUM_PRIMES> {
+    fn default() -> Self {
+        Self::ONE
+    }
+}
+
 /// Denominator representation that decomposes an integer as a product of the
 /// first 24 primes (up to 89), multiplied by a regular big integer when that's
 /// not sufficient.

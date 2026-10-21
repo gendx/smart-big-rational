@@ -48,6 +48,12 @@ pub struct SmartBigRational<D> {
     denom: D,
 }
 
+impl<D: Denom> Default for SmartBigRational<D> {
+    fn default() -> Self {
+        Self::ZERO
+    }
+}
+
 impl<D: Denom> SmartBigRational<D> {
     /// Constant value of 0.
     pub const ZERO: Self = Self {

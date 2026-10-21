@@ -20,6 +20,7 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// suitable for use in a [`SmartBigRational`](crate::SmartBigRational).
 pub trait Denom:
     Clone
+    + Default
     + From<u8>
     + From<u16>
     + From<u32>
