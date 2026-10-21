@@ -320,8 +320,8 @@ where
 
     // Lastly, we compute the ceiling of that:
     //  multiplier = 2^(N+shift+1) / d + 1 - 2^N
-    // Because d isn't a power of 2 (and therefore doesn't divide 2^(N+shift+1)),
-    // this gives:
+    // Because d isn't a power of 2 (and therefore doesn't divide
+    // 2^(N+shift+1)), this gives:
     //  multiplier = ceil(2^(N+shift+1) / d) - 2^N
     multiplier + T::ONE
 }

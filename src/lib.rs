@@ -919,8 +919,8 @@ mod tests {
                 }
             }
             Some(n) => {
-                // Randomly sample values rather than conducting an exhaustive O(n^3) search on
-                // the test values.
+                // Randomly sample values rather than conducting an exhaustive
+                // O(n^3) search on the test values.
                 let mut rng = rand::rng();
 
                 for _ in 0..n {
