@@ -29,8 +29,9 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DenomArray<const NUM_PRIMES: usize> {
-    // Invariant: the representation is in canonical form, i.e. powers of small primes must
-    // saturate the primes array before overflowing into the remainder.
+    // Invariant: the representation is in canonical form, i.e. powers of small
+    // primes must saturate the primes array before overflowing into the
+    // remainder.
     primes: [u8; NUM_PRIMES],
     remainder: Option<BigUint>,
 }

@@ -31,8 +31,9 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// when that's not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DenomSparseU16<const NUM_PRIMES: usize, const NUM_INLINE: usize> {
-    // Invariant: the representation is in canonical form, i.e. powers of small primes must
-    // saturate the primes array before overflowing into the remainder.
+    // Invariant: the representation is in canonical form, i.e. powers of small
+    // primes must saturate the primes array before overflowing into the
+    // remainder.
     primes: SmallVec<[(u16, u16); NUM_INLINE]>,
     remainder: Option<BigUint>,
 }
