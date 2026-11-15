@@ -157,6 +157,124 @@ impl<const NUM_PRIMES: usize> Denom for DenomArray<NUM_PRIMES> {
 }
 
 impl<const NUM_PRIMES: usize> DenomArray<NUM_PRIMES> {
+    /// Decomposes the given integer into a denominator.
+    ///
+    /// This implementation is slow but suitable for `const` contexts.
+    /// Non-`const` users should use `From<u8>` instead.
+    pub const fn decompose_u8_slow(mut x: u8) -> Self {
+        assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
+
+        let mut primes = [0; NUM_PRIMES];
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        let mut i = 1;
+        'outer: while i < NUM_PRIMES {
+            let p = ODD_PRIMES[i - 1];
+            if p > u8::MAX as u16 {
+                break;
+            }
+            let p = p as u8;
+
+            while primes[i] != u8::MAX && x.is_multiple_of(p) {
+                primes[i] += 1;
+                x /= p;
+                if x == 1 {
+                    break 'outer;
+                }
+            }
+
+            i += 1;
+        }
+
+        let remainder = if x == 1 {
+            None
+        } else {
+            Some(BigUint::new_const(x as u32))
+        };
+        Self { primes, remainder }
+    }
+
+    /// Decomposes the given integer into a denominator.
+    ///
+    /// This implementation is slow but suitable for `const` contexts.
+    /// Non-`const` users should use `From<u16>` instead.
+    pub const fn decompose_u16_slow(mut x: u16) -> Self {
+        assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
+
+        let mut primes = [0; NUM_PRIMES];
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        let mut i = 1;
+        'outer: while i < NUM_PRIMES {
+            let p = ODD_PRIMES[i - 1];
+
+            while primes[i] != u8::MAX && x.is_multiple_of(p) {
+                primes[i] += 1;
+                x /= p;
+                if x == 1 {
+                    break 'outer;
+                }
+            }
+
+            i += 1;
+        }
+
+        let remainder = if x == 1 {
+            None
+        } else {
+            Some(BigUint::new_const(x as u32))
+        };
+        Self { primes, remainder }
+    }
+
+    /// Decomposes the given integer into a denominator.
+    ///
+    /// This implementation is slow but suitable for `const` contexts.
+    /// Non-`const` users should use `From<u32>` instead.
+    pub const fn decompose_u32_slow(mut x: u32) -> Self {
+        assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
+
+        let mut primes = [0; NUM_PRIMES];
+
+        let count2 = x.trailing_zeros();
+        if count2 != 0 {
+            x >>= count2;
+            primes[0] = count2 as u8;
+        }
+
+        let mut i = 1;
+        'outer: while i < NUM_PRIMES {
+            let p = ODD_PRIMES[i - 1] as u32;
+
+            while primes[i] != u8::MAX && x.is_multiple_of(p) {
+                primes[i] += 1;
+                x /= p;
+                if x == 1 {
+                    break 'outer;
+                }
+            }
+
+            i += 1;
+        }
+
+        let remainder = if x == 1 {
+            None
+        } else {
+            Some(BigUint::new_const(x))
+        };
+        Self { primes, remainder }
+    }
+
     fn decompose(mut x: BigUint) -> Self {
         const {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
@@ -1397,6 +1515,8 @@ mod tests {
                 $mod,
                 $num_primes,
                 test_decompose_is_correct,
+                test_decompose_u8_slow_is_correct,
+                test_decompose_u16_slow_is_correct,
                 test_decompose_prime_powers,
                 test_mul_prime_powers,
                 test_div_prime_powers,
@@ -1423,6 +1543,34 @@ mod tests {
                 }
             }
             assert_eq!(recomposed, bigi);
+        }
+    }
+
+    fn test_decompose_u8_slow_is_correct<const NUM_PRIMES: usize>() {
+        for i in 1..=u8::MAX {
+            let x = DenomArray::<NUM_PRIMES>::decompose_u8_slow(i);
+            let mut recomposed = x.remainder.unwrap_or_else(BigUint::one);
+            for i in 0..NUM_PRIMES {
+                let prime = if i == 0 { 2 } else { ODD_PRIMES[i - 1] };
+                for _ in 0..x.primes[i] {
+                    recomposed *= prime;
+                }
+            }
+            assert_eq!(recomposed, BigUint::from(i));
+        }
+    }
+
+    fn test_decompose_u16_slow_is_correct<const NUM_PRIMES: usize>() {
+        for i in 1..=u16::MAX {
+            let x = DenomArray::<NUM_PRIMES>::decompose_u16_slow(i);
+            let mut recomposed = x.remainder.unwrap_or_else(BigUint::one);
+            for i in 0..NUM_PRIMES {
+                let prime = if i == 0 { 2 } else { ODD_PRIMES[i - 1] };
+                for _ in 0..x.primes[i] {
+                    recomposed *= prime;
+                }
+            }
+            assert_eq!(recomposed, BigUint::from(i));
         }
     }
 
@@ -1462,6 +1610,79 @@ mod tests {
                     3, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
                 ],
                 remainder: Some(BigUint::from(97_usize)),
+            }
+        );
+    }
+
+    #[test]
+    fn test_decompose_u32_slow_known_values() {
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(128),
+            DenomArray24 {
+                primes: [
+                    7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: None,
+            }
+        );
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(1_000_000),
+            DenomArray24 {
+                primes: [
+                    6, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: None,
+            }
+        );
+
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(89),
+            DenomArray24 {
+                primes: [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+                ],
+                remainder: None,
+            }
+        );
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(97),
+            DenomArray24 {
+                primes: [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: Some(BigUint::from(97_usize)),
+            }
+        );
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(97000),
+            DenomArray24 {
+                primes: [
+                    3, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: Some(BigUint::from(97_usize)),
+            }
+        );
+
+        // 3 * 5 * 17 * 257 * 65535
+        assert_eq!(
+            DenomArray24::decompose_u32_slow(u32::MAX),
+            DenomArray24 {
+                primes: [
+                    0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: Some(BigUint::from(257_usize * 65537))
+            }
+        );
+        assert_eq!(
+            DenomArray::<100>::decompose_u32_slow(u32::MAX),
+            DenomArray {
+                primes: [
+                    0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
+                remainder: Some(BigUint::from(65537_usize))
             }
         );
     }
