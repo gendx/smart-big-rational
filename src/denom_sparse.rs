@@ -21,6 +21,8 @@ use crate::{Denom, DenomRef};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Zero};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::iter::Peekable;
@@ -30,6 +32,7 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// first `NUM_PRIMES` primes (up to 2^16), multiplied by a regular big integer
 /// when that's not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DenomSparseU16<const NUM_PRIMES: usize, const NUM_INLINE: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small
     // primes must saturate the primes array before overflowing into the

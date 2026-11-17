@@ -9,5 +9,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
 
-      - name: Build
+      - name: Build (no default features)
+        run: cargo bench --no-run --verbose --all --no-default-features
+      - name: Build (default features)
         run: cargo bench --no-run --verbose --all
+      - name: Build (all features)
+        run: cargo bench --no-run --verbose --all --all-features

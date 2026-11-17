@@ -21,6 +21,10 @@ use crate::{Denom, DenomRef};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Zero};
+#[cfg(feature = "serde")]
+use serde::de::Error;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::ops::{Div, DivAssign, Mul, MulAssign};
 
@@ -28,12 +32,40 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// first `NUM_PRIMES` primes, multiplied by a regular big integer when that's
 /// not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DenomArray<const NUM_PRIMES: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small
     // primes must saturate the primes array before overflowing into the
     // remainder.
+    #[cfg_attr(feature = "serde", serde(serialize_with = "array_serializer"))]
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "array_deserializer"))]
     primes: [u8; NUM_PRIMES],
     remainder: Option<BigUint>,
+}
+
+// TODO: Remove this custom implementation when https://github.com/serde-rs/serde/issues/3126 is
+// fixed.
+#[cfg(feature = "serde")]
+fn array_serializer<S, const N: usize>(array: &[u8; N], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let slice: &[u8] = array as _;
+    slice.serialize(serializer)
+}
+
+// TODO: Remove this custom implementation when https://github.com/serde-rs/serde/issues/3126 is
+// fixed.
+#[cfg(feature = "serde")]
+fn array_deserializer<'de, D, const N: usize>(deserializer: D) -> Result<[u8; N], D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let vec: Vec<u8> = Deserialize::deserialize(deserializer)?;
+    let array: [u8; N] = vec.try_into().map_err(|v: Vec<u8>| {
+        D::Error::custom(format!("Expected array of {N} items, got {}", v.len()))
+    })?;
+    Ok(array)
 }
 
 impl<const NUM_PRIMES: usize> Default for DenomArray<NUM_PRIMES> {

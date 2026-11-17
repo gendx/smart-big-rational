@@ -33,6 +33,8 @@ pub use denom_sparse::{DenomSparse6542, DenomSparseU16};
 use num_bigint::{BigInt, BigUint, Sign};
 use num_rational::BigRational;
 use num_traits::{One, Pow, Zero};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::iter::{Product, Sum};
@@ -43,6 +45,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 /// This is achieved by representing the denominator with a [`Denom`] type, and
 /// performing only partial GCD reductions during arithmetic operations.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SmartBigRational<D> {
     num: BigInt,
     denom: D,
