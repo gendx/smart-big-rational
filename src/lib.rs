@@ -15,7 +15,7 @@
 //! This crate implements a big rational type that is optimized for addition,
 //! subtraction and multiplication.
 //!
-//! Unlike the vanilla [`BigRational`] type, the [`SmartBigRational`] doesn't
+//! Unlike the vanilla big rational type, the [`SmartBigRational`] doesn't
 //! perform a full GCD reduction upon addition and subtraction, and doesn't
 //! perform any reduction upon multiplication.
 
@@ -31,7 +31,7 @@ pub use denom::{Denom, DenomRef};
 pub use denom_array::{DenomArray, DenomArray24};
 pub use denom_sparse::{DenomSparse6542, DenomSparseU16};
 use num_bigint::{BigInt, BigUint, Sign};
-use num_rational::BigRational;
+use num_rational::Ratio;
 use num_traits::{One, Pow, Zero};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -75,8 +75,9 @@ impl<D: Denom> SmartBigRational<D> {
     ///
     /// ```
     /// # use num_bigint::BigInt;
-    /// # use num_rational::BigRational;
+    /// # use num_rational::Ratio;
     /// # use smart_big_rational::{DenomArray24, SmartBigRational};
+    /// type BigRational = Ratio<BigInt>;
     /// let x = SmartBigRational::<DenomArray24>::ratio(2, 3u32);
     ///
     /// assert_eq!(
@@ -106,13 +107,13 @@ impl<D: Denom> SmartBigRational<D> {
         &self.denom
     }
 
-    /// Converts this value to a [`BigRational`].
-    pub fn into_big_rational(self) -> BigRational {
+    /// Converts this value to a big rational.
+    pub fn into_big_rational(self) -> Ratio<BigInt> {
         self.into()
     }
 
-    /// Converts this value to a [`BigRational`].
-    pub fn to_big_rational(&self) -> BigRational {
+    /// Converts this value to a big rational.
+    pub fn to_big_rational(&self) -> Ratio<BigInt> {
         self.into()
     }
 
@@ -132,8 +133,8 @@ impl<D: Denom> SmartBigRational<D> {
     }
 }
 
-impl<D: Denom> From<BigRational> for SmartBigRational<D> {
-    fn from(value: BigRational) -> Self {
+impl<D: Denom> From<Ratio<BigInt>> for SmartBigRational<D> {
+    fn from(value: Ratio<BigInt>) -> Self {
         let (num, denom) = value.into_raw();
         let (sign, denom) = denom.into_parts();
         assert_eq!(sign, Sign::Plus);
@@ -144,8 +145,8 @@ impl<D: Denom> From<BigRational> for SmartBigRational<D> {
     }
 }
 
-impl<D: Denom> From<&BigRational> for SmartBigRational<D> {
-    fn from(value: &BigRational) -> Self {
+impl<D: Denom> From<&Ratio<BigInt>> for SmartBigRational<D> {
+    fn from(value: &Ratio<BigInt>) -> Self {
         let denom = value.denom();
         assert_eq!(denom.sign(), Sign::Plus);
         Self {
@@ -164,15 +165,15 @@ impl<D: Denom> From<BigInt> for SmartBigRational<D> {
     }
 }
 
-impl<D: Denom> From<SmartBigRational<D>> for BigRational {
-    fn from(value: SmartBigRational<D>) -> BigRational {
-        BigRational::new(value.num, value.denom.to_biguint().into())
+impl<D: Denom> From<SmartBigRational<D>> for Ratio<BigInt> {
+    fn from(value: SmartBigRational<D>) -> Ratio<BigInt> {
+        Ratio::new(value.num, value.denom.to_biguint().into())
     }
 }
 
-impl<D: Denom> From<&SmartBigRational<D>> for BigRational {
-    fn from(value: &SmartBigRational<D>) -> BigRational {
-        BigRational::new(value.num.clone(), value.denom.to_biguint().into())
+impl<D: Denom> From<&SmartBigRational<D>> for Ratio<BigInt> {
+    fn from(value: &SmartBigRational<D>) -> Ratio<BigInt> {
+        Ratio::new(value.num.clone(), value.denom.to_biguint().into())
     }
 }
 
