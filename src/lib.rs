@@ -971,6 +971,7 @@ mod tests {
             tests!(
                 $mod,
                 $denom,
+                test_zero_one,
                 test_is_zero,
                 test_zero_is_add_neutral,
                 test_add_is_commutative,
@@ -987,7 +988,9 @@ mod tests {
                 test_div_self,
                 test_mul_div,
                 test_sum,
+                test_sum_ref,
                 test_product,
+                test_product_ref,
                 #[cfg(feature = "serde")]
                 test_serialize_deserialize_json,
                 #[cfg(feature = "serde")]
@@ -1001,13 +1004,21 @@ mod tests {
     all_tests!(denom_sparse24, DenomSparseU16<24, 8>);
     all_tests!(denom_sparse6542, DenomSparseU16<6542, 8>);
 
+    fn test_zero_one<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        assert_eq!(SmartBigRational::<D>::zero(), SmartBigRational::<D>::ZERO);
+        assert_eq!(SmartBigRational::<D>::one(), SmartBigRational::<D>::ONE);
+    }
+
     fn test_is_zero<D: Denom + Debug>()
     where
         for<'a> &'a D: DenomRef<D>,
     {
         let test_values = get_positive_test_values::<D>();
-        assert!(SmartBigRational::<DenomArray24>::ZERO.is_zero());
-        assert!(!SmartBigRational::<DenomArray24>::ONE.is_zero());
+        assert!(SmartBigRational::<D>::ZERO.is_zero());
+        assert!(!SmartBigRational::<D>::ONE.is_zero());
         loop_check1(&test_values, |a| {
             assert!(!a.is_zero(), "{a} is zero");
         });
@@ -1185,6 +1196,22 @@ mod tests {
             expected += x;
         }
         assert_eq!(
+            test_values.clone().into_iter().sum::<SmartBigRational<_>>(),
+            expected,
+            "[x, ..., y].sum() != x + ... + y for {test_values:?}"
+        );
+    }
+
+    fn test_sum_ref<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        let mut expected = SmartBigRational::ZERO;
+        for x in &test_values {
+            expected += x;
+        }
+        assert_eq!(
             test_values.iter().sum::<SmartBigRational<_>>(),
             expected,
             "[x, ..., y].sum() != x + ... + y for {test_values:?}"
@@ -1192,6 +1219,25 @@ mod tests {
     }
 
     fn test_product<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        let mut expected = SmartBigRational::ONE;
+        for x in &test_values {
+            expected *= x;
+        }
+        assert_eq!(
+            test_values
+                .clone()
+                .into_iter()
+                .product::<SmartBigRational<_>>(),
+            expected,
+            "[x, ..., y].product() != x * ... * y for {test_values:?}"
+        );
+    }
+
+    fn test_product_ref<D: Denom + Debug>()
     where
         for<'a> &'a D: DenomRef<D>,
     {
