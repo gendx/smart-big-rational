@@ -24,8 +24,9 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// primes, multiplied by a regular big integer when that's not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Denom {
-    // Invariant: the representation is in canonical form, i.e. powers of small primes must
-    // saturate the primes array before overflowing into the remainder.
+    // Invariant: the representation is in canonical form, i.e. powers of small
+    // primes must saturate the primes array before overflowing into the
+    // remainder.
     primes: [u8; Self::NUM_PRIMES],
     remainder: Option<BigUint>,
 }
@@ -656,15 +657,13 @@ impl One for Denom {
 impl num_traits::Pow<u32> for Denom {
     type Output = Self;
 
-    fn pow(mut self, rhs: u32) -> Self {
+    fn pow(self, rhs: u32) -> Self {
         if rhs == 0 {
             return Denom::ONE;
         }
-        let primes = Denom::pow_primes(&self.primes, rhs, &mut self.remainder);
-        Denom {
-            primes,
-            remainder: self.remainder,
-        }
+        let mut remainder = self.remainder.map(|r| r.pow(rhs));
+        let primes = Denom::pow_primes(&self.primes, rhs, &mut remainder);
+        Denom { primes, remainder }
     }
 }
 
@@ -675,7 +674,7 @@ impl num_traits::Pow<u32> for &Denom {
         if rhs == 0 {
             return Denom::ONE;
         }
-        let mut remainder = self.remainder.clone();
+        let mut remainder = self.remainder.as_ref().map(|r| r.pow(rhs));
         let primes = Denom::pow_primes(&self.primes, rhs, &mut remainder);
         Denom { primes, remainder }
     }
