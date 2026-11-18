@@ -29,8 +29,9 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DenomArray<const NUM_PRIMES: usize> {
-    // Invariant: the representation is in canonical form, i.e. powers of small primes must
-    // saturate the primes array before overflowing into the remainder.
+    // Invariant: the representation is in canonical form, i.e. powers of small
+    // primes must saturate the primes array before overflowing into the
+    // remainder.
     primes: [u8; NUM_PRIMES],
     remainder: Option<BigUint>,
 }
@@ -737,15 +738,13 @@ impl<const NUM_PRIMES: usize> One for DenomArray<NUM_PRIMES> {
 impl<const NUM_PRIMES: usize> num_traits::Pow<u32> for DenomArray<NUM_PRIMES> {
     type Output = Self;
 
-    fn pow(mut self, rhs: u32) -> Self {
+    fn pow(self, rhs: u32) -> Self {
         if rhs == 0 {
             return Self::ONE;
         }
-        let primes = Self::pow_primes(&self.primes, rhs, &mut self.remainder);
-        Self {
-            primes,
-            remainder: self.remainder,
-        }
+        let mut remainder = self.remainder.map(|r| r.pow(rhs));
+        let primes = Self::pow_primes(&self.primes, rhs, &mut remainder);
+        Self { primes, remainder }
     }
 }
 
@@ -756,7 +755,7 @@ impl<const NUM_PRIMES: usize> num_traits::Pow<u32> for &DenomArray<NUM_PRIMES> {
         if rhs == 0 {
             return DenomArray::ONE;
         }
-        let mut remainder = self.remainder.clone();
+        let mut remainder = self.remainder.as_ref().map(|r| r.pow(rhs));
         let primes = DenomArray::pow_primes(&self.primes, rhs, &mut remainder);
         DenomArray { primes, remainder }
     }

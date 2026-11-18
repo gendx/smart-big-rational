@@ -919,8 +919,8 @@ mod tests {
                 }
             }
             Some(n) => {
-                // Randomly sample values rather than conducting an exhaustive O(n^3) search on
-                // the test values.
+                // Randomly sample values rather than conducting an exhaustive
+                // O(n^3) search on the test values.
                 let mut rng = rand::rng();
 
                 for _ in 0..n {
@@ -975,6 +975,7 @@ mod tests {
                 test_one_is_div_neutral,
                 test_div_self,
                 test_mul_div,
+                test_pow_is_repeated_mul,
                 test_sum,
                 test_product,
             );
@@ -1157,6 +1158,20 @@ mod tests {
         let test_values = get_positive_test_values::<D>();
         loop_check2(&test_values, |a, b| {
             assert_eq!(&((a * b) / b), a, "(a * b) / b != a for {a}, {b}");
+        });
+    }
+
+    fn test_pow_is_repeated_mul<D: Denom + Debug>()
+    where
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        loop_check1(&test_values, |a| {
+            let mut x = SmartBigRational::<D>::ONE;
+            for n in 0..=256 {
+                assert_eq!(a.pow(n), x, "a^n != a * ... * a for {a}, {n}");
+                x *= a;
+            }
         });
     }
 
