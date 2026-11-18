@@ -32,15 +32,72 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// first `NUM_PRIMES` primes, multiplied by a regular big integer when that's
 /// not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DenomArray<const NUM_PRIMES: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small
     // primes must saturate the primes array before overflowing into the
     // remainder.
-    #[cfg_attr(feature = "serde", serde(serialize_with = "array_serializer"))]
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "array_deserializer"))]
     primes: [u8; NUM_PRIMES],
     remainder: Option<BigUint>,
+}
+
+#[cfg(feature = "serde")]
+impl<const NUM_PRIMES: usize> Serialize for DenomArray<NUM_PRIMES> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        ser::DenomArray {
+            primes: &self.primes,
+            remainder: &self.remainder,
+        }
+        .serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, const NUM_PRIMES: usize> Deserialize<'de> for DenomArray<NUM_PRIMES> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let de::DenomArray { primes, remainder } = Deserialize::deserialize(deserializer)?;
+        Ok(match remainder {
+            None => Self {
+                primes,
+                remainder: None,
+            },
+            Some(r) => {
+                Self {
+                    primes,
+                    remainder: None,
+                } * Self::decompose(r)
+            }
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+mod ser {
+    use super::*;
+
+    #[derive(Serialize)]
+    pub struct DenomArray<'a, const NUM_PRIMES: usize> {
+        #[serde(serialize_with = "array_serializer")]
+        pub primes: &'a [u8; NUM_PRIMES],
+        pub remainder: &'a Option<BigUint>,
+    }
+}
+
+#[cfg(feature = "serde")]
+mod de {
+    use super::*;
+
+    #[derive(Deserialize)]
+    pub struct DenomArray<const NUM_PRIMES: usize> {
+        #[serde(deserialize_with = "array_deserializer")]
+        pub primes: [u8; NUM_PRIMES],
+        pub remainder: Option<BigUint>,
+    }
 }
 
 // TODO: Remove this custom implementation when https://github.com/serde-rs/serde/issues/3126 is

@@ -22,7 +22,9 @@ use num_bigint::{BigInt, BigUint, Sign};
 use num_integer::Integer;
 use num_traits::{One, Zero};
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use smallvec::SmallVec;
 use std::cmp::Ordering;
 use std::iter::Peekable;
@@ -32,13 +34,78 @@ use std::ops::{Div, DivAssign, Mul, MulAssign};
 /// first `NUM_PRIMES` primes (up to 2^16), multiplied by a regular big integer
 /// when that's not sufficient.
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct DenomSparseU16<const NUM_PRIMES: usize, const NUM_INLINE: usize> {
     // Invariant: the representation is in canonical form, i.e. powers of small
     // primes must saturate the primes array before overflowing into the
     // remainder.
     primes: SmallVec<[(u16, u16); NUM_INLINE]>,
     remainder: Option<BigUint>,
+}
+
+#[cfg(feature = "serde")]
+impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Serialize
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        ser::DenomArray {
+            primes: &self.primes,
+            remainder: &self.remainder,
+        }
+        .serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, const NUM_PRIMES: usize, const NUM_INLINE: usize> Deserialize<'de>
+    for DenomSparseU16<NUM_PRIMES, NUM_INLINE>
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let de::DenomArray { primes, remainder } = Deserialize::deserialize(deserializer)?;
+        if !Self::validate_primes(&primes) {
+            return Err(D::Error::custom(format!("Invalid prime list: {primes:?}")));
+        }
+
+        Ok(match remainder {
+            None => Self {
+                primes,
+                remainder: None,
+            },
+            Some(r) => {
+                Self {
+                    primes,
+                    remainder: None,
+                } * Self::decompose(r)
+            }
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+mod ser {
+    use super::*;
+
+    #[derive(Serialize)]
+    pub struct DenomArray<'a, const NUM_INLINE: usize> {
+        pub primes: &'a SmallVec<[(u16, u16); NUM_INLINE]>,
+        pub remainder: &'a Option<BigUint>,
+    }
+}
+
+#[cfg(feature = "serde")]
+mod de {
+    use super::*;
+
+    #[derive(Deserialize)]
+    pub struct DenomArray<const NUM_INLINE: usize> {
+        pub primes: SmallVec<[(u16, u16); NUM_INLINE]>,
+        pub remainder: Option<BigUint>,
+    }
 }
 
 impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Default
@@ -156,6 +223,58 @@ impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> Denom
 }
 
 impl<const NUM_PRIMES: usize, const NUM_INLINE: usize> DenomSparseU16<NUM_PRIMES, NUM_INLINE> {
+    // A binary search scan makes `n * log2(primes)` lookups, so we use it for
+    // up to `primes / log2(primes)` items.
+    // TODO: The cutoff could probably be smaller as the linear scan is more
+    // cache efficient and small primes are more common than large ones in
+    // practice.
+    #[cfg(feature = "serde")]
+    const BINARY_SEARCH_CUTOFF: usize =
+        NUM_PRIMES / NUM_PRIMES.next_power_of_two().ilog2() as usize;
+
+    #[cfg(feature = "serde")]
+    fn validate_primes(primes: &[(u16, u16)]) -> bool {
+        if primes.iter().any(|(_, count)| *count == 0) {
+            return false;
+        }
+
+        let mut acceptable_primes = &ODD_PRIMES[..NUM_PRIMES - 1];
+
+        if primes.len() <= Self::BINARY_SEARCH_CUTOFF {
+            // Binary search scan.
+            for (i, (p, _)) in primes.iter().enumerate() {
+                if i == 0 && *p == 2 {
+                    continue;
+                }
+
+                match acceptable_primes.binary_search(p) {
+                    Ok(j) => acceptable_primes = &acceptable_primes[j + 1..],
+                    Err(_) => return false,
+                }
+            }
+        } else {
+            // Linear scan.
+            let mut it = acceptable_primes.iter();
+            'outer: for (i, (p, _)) in primes.iter().enumerate() {
+                if i == 0 && *p == 2 {
+                    continue;
+                }
+
+                for q in it.by_ref() {
+                    match q.cmp(p) {
+                        Ordering::Less => (),
+                        Ordering::Equal => continue 'outer,
+                        Ordering::Greater => return false,
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        true
+    }
+
     fn decompose(mut x: BigUint) -> Self {
         const {
             assert!(NUM_PRIMES <= ODD_PRIMES.len() + 1);
@@ -1445,10 +1564,11 @@ mod tests {
         (
             $mod:ident,
             $num_primes:expr,
-            $( $case:ident ,)*
+            $( $( #[ $attrs:meta ] )* $case:ident ,)*
         ) => {
             mod $mod {
                 $(
+                    $( #[$attrs] )*
                     #[test]
                     fn $case() {
                         super::$case::<$num_primes>();
@@ -1473,6 +1593,8 @@ mod tests {
                 test_product,
                 test_normalize,
                 test_gcd_reduce,
+                #[cfg(feature = "serde")]
+                test_validate_primes,
             );
         };
     }
@@ -2002,5 +2124,53 @@ mod tests {
             denom,
             DenomSparseU16::<NUM_PRIMES, 8>::from(BigUint::from(5u32))
         );
+    }
+
+    #[cfg(feature = "serde")]
+    fn test_validate_primes<const NUM_PRIMES: usize>() {
+        let mut all_primes: Vec<(u16, u16)> = std::iter::once(2)
+            .chain(ODD_PRIMES.into_iter().take(NUM_PRIMES - 1))
+            .map(|p| (p, 1))
+            .collect();
+
+        for i in 0..=NUM_PRIMES {
+            assert!(
+                DenomSparseU16::<NUM_PRIMES, 8>::validate_primes(&all_primes[..i]),
+                "Valid prime array detected as invalid: {:?}",
+                &all_primes[..i],
+            );
+
+            if i == NUM_PRIMES {
+                break;
+            }
+
+            // Primes appearing in the wrong order are invalid.
+            for j in 0..i.min(50) {
+                all_primes.swap(i, j);
+                assert!(
+                    !DenomSparseU16::<NUM_PRIMES, 8>::validate_primes(&all_primes),
+                    "Invalid prime array (swapped order {i}-{j}) detected as valid: {all_primes:?}"
+                );
+                all_primes.swap(i, j);
+            }
+
+            // Even integers are not primes.
+            if i != 0 {
+                all_primes[i].0 += 1;
+                assert!(
+                    !DenomSparseU16::<NUM_PRIMES, 8>::validate_primes(&all_primes),
+                    "Invalid prime array (even integer @{i}) detected as valid: {all_primes:?}"
+                );
+                all_primes[i].0 -= 1;
+            }
+
+            // Primes with a count of zero are invalid.
+            all_primes[i].1 = 0;
+            assert!(
+                !DenomSparseU16::<NUM_PRIMES, 8>::validate_primes(&all_primes),
+                "Invalid prime array (zero count @{i}) detected as valid: {all_primes:?}"
+            );
+            all_primes[i].1 = 1;
+        }
     }
 }

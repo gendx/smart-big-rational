@@ -947,12 +947,13 @@ mod tests {
         (
             $mod:ident,
             $denom:ty,
-            $( $case:ident ,)*
+            $( $( #[ $attrs:meta ] )* $case:ident ,)*
         ) => {
             mod $mod {
                 use super::*;
 
                 $(
+                    $( #[$attrs] )*
                     #[test]
                     fn $case() {
                         $crate::tests::$case::<$denom>();
@@ -987,6 +988,10 @@ mod tests {
                 test_mul_div,
                 test_sum,
                 test_product,
+                #[cfg(feature = "serde")]
+                test_serialize_deserialize_json,
+                #[cfg(feature = "serde")]
+                test_serialize_deserialize_postcard,
             );
         };
     }
@@ -1200,5 +1205,45 @@ mod tests {
             expected,
             "[x, ..., y].product() != x * ... * y for {test_values:?}"
         );
+    }
+
+    #[cfg(feature = "serde")]
+    fn test_serialize_deserialize_json<D>()
+    where
+        D: Denom + Debug + Serialize + for<'de> Deserialize<'de>,
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        loop_check1(&test_values, |a| {
+            let serialized = match serde_json::to_string(a) {
+                Ok(x) => x,
+                Err(e) => panic!("failed to serialize {a}: {e:?}"),
+            };
+            let b: SmartBigRational<D> = match serde_json::from_str(&serialized) {
+                Ok(x) => x,
+                Err(e) => panic!("failed to deserialize {a}: {e:?}"),
+            };
+            assert_eq!(a, &b, "de(ser(a)) != Ok(a) for {a}, {b}")
+        });
+    }
+
+    #[cfg(feature = "serde")]
+    fn test_serialize_deserialize_postcard<D>()
+    where
+        D: Denom + Debug + Serialize + for<'de> Deserialize<'de>,
+        for<'a> &'a D: DenomRef<D>,
+    {
+        let test_values = get_positive_test_values::<D>();
+        loop_check1(&test_values, |a| {
+            let serialized = match postcard::to_stdvec(a) {
+                Ok(x) => x,
+                Err(e) => panic!("failed to serialize {a}: {e:?}"),
+            };
+            let b: SmartBigRational<D> = match postcard::from_bytes(&serialized) {
+                Ok(x) => x,
+                Err(e) => panic!("failed to deserialize {a}: {e:?}"),
+            };
+            assert_eq!(a, &b, "de(ser(a)) != Ok(a) for {a}, {b}")
+        });
     }
 }
